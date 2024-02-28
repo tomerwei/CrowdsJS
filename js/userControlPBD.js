@@ -50,36 +50,9 @@ function calculateAngle(point1_x, point1_z, point2_x, point2_z, velocity_x, velo
   return angleDegrees;
 }
 
-function degreeBetween(p1x, p1z, p2x, p2z){
-
-  // Calculate the dot product of the two vectors
-  const dotProduct = p1x * p2x + p1z * p2z;
-
-  // Calculate the magnitude (length) of the vectors
-  const magnitude1 = Math.sqrt(p1x * p1x + p1z * p1z);
-  const magnitude2 = Math.sqrt(p2x * p2x + p2z * p2z);
-
-  // Calculate the cosine of the angle between the vectors
-  const cosTheta = dotProduct / (magnitude1 * magnitude2);
-
-  // Calculate the angle in radians
-  const angleRad = Math.acos(cosTheta);
-
-  // Convert radians to degrees
-  const angleDeg = angleRad * (180 / Math.PI);
-
-  // Calculate the signed angle in degrees using the atan2 function
-  const signedAngleDeg = Math.atan2(p2z, p2x) - Math.atan2(p1z, p2x);
-
-  // Ensure the angle is between 0 and 360 degrees
-  const normalizedAngleDeg = (signedAngleDeg >= 0) ? signedAngleDeg : (signedAngleDeg + 2 * Math.PI) * (180 / Math.PI);
-
-return angleDeg;
-}
-
 
 // Function to get a vector direction deviated by a certain angle from a known normalized vector
-function getNewVectorDeviatedFromAnother(knownVector, angle) {
+function deviateVectorByAngle(knownVector, angle) {
   // Calculate the components of the known vector
   var x = knownVector.x;
   var y = knownVector.y;
@@ -95,8 +68,7 @@ function getNewVectorDeviatedFromAnother(knownVector, angle) {
   return { x: newX / magnitude, y: 0, z: newZ / magnitude };
 }
 
-
-function findNewPositionByProjecttion(predict_point, cur_point, direction_vector) {
+function findNewPositionByProjection(predict_point, cur_point, direction_vector) {
   // get position vector from current and precidted position
   const position_vector = new THREE.Vector3().subVectors(predict_point, cur_point);
 
@@ -124,7 +96,7 @@ export function step(RADIUS, sceneEntities, world, scene, customParams = {}) {
   const C_LONG_RANGE_STIFF = 0.04;  //previously used before experimenting for orientation
   const MAX_DELTA = 0.05;
 
-  let angle_threshold = 0.1299;   //angle less or equal to 0.12 doesn't work.
+  let angleThresholdBtwnDirectionAndNormalInDeg = 0.5;   //angle less or equal to 0.12 doesn't work.
 
   // collision functions
   function rotateLineSegment(x1, y1, x2, y2, r) {
@@ -242,6 +214,37 @@ export function step(RADIUS, sceneEntities, world, scene, customParams = {}) {
       dy = py - near_y;
     }
     return Math.hypot(dx, dy);
+  }
+
+  function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
+
+    let iCoords = rotateLineSegment(
+        agent.x,
+        agent.z + agentLength + RADIUS,
+        agent.x,
+        agent.z - agentLength - RADIUS,
+        current_rotation
+      );
+  
+    const aa = {
+      tip: new THREE.Vector3(iCoords[0], 0, iCoords[1]),
+      base: new THREE.Vector3(iCoords[2], 0, iCoords[3]),
+      };
+  
+      // Calculate the slope of the line
+      const dx = aa.base.x - aa.tip.x;
+      const dz = aa.base.z - aa.tip.z  ;
+  
+      let leng = Math.sqrt(dx*dx + dz*dz);
+  
+      // Generate a normal vector (-dy, dx), perpendicular to the line
+      let nx = -dz / leng;  
+      let nz = dx / leng;
+  
+      let normal_to_capsule = new THREE.Vector3(nx, 0, nz);
+      agent.normal_to_capsule = normal_to_capsule;
+  
+    return normal_to_capsule;
   }
 
   /*  -----------------------  */
@@ -460,6 +463,60 @@ export function step(RADIUS, sceneEntities, world, scene, customParams = {}) {
         s
     ];
   }
+
+
+
+  function rotationConstraint(capsule_entity)
+  {
+    let current_rotation = capsule_entity.agent.rotation.z;
+  
+    let NormalVectorToCapsuleBody = getCapsuleBodyNormal(capsule_entity, agentLength, RADIUS, current_rotation);
+    let NormalVectorToCapsuleBodyNormalized = NormalVectorToCapsuleBody.clone().normalize();
+  
+    var currentPosition = new THREE.Vector3(capsule_entity.x, 0, capsule_entity.z);
+    var predicted_position = new THREE.Vector3(capsule_entity.px, 0, capsule_entity.pz);
+    var directionVector = predicted_position.clone().sub(currentPosition);    
+    var directionVectorNormalized = directionVector.clone().normalize();
+  
+    let angleOfDirectionAndCapsuleBodyNormal = angleBetweenVectors_2(directionVectorNormalized, NormalVectorToCapsuleBody);
+  
+    //check if the angle btwn capsule body normal vector is greater than a threhold angle
+    if(angleOfDirectionAndCapsuleBodyNormal > angleThresholdBtwnDirectionAndNormalInDeg)
+    {  
+      //calculating projected point on right side
+      let angleOfDirectionAndCapsuleBodyNormal_Radians_right = angleThresholdBtwnDirectionAndNormalInDeg * (Math.PI/180);
+      let rightSideDirectionVector_temp = deviateVectorByAngle(NormalVectorToCapsuleBodyNormalized, angleOfDirectionAndCapsuleBodyNormal_Radians_right);
+      let rightSideDirectionVector = new THREE.Vector3(rightSideDirectionVector_temp.x, 0, rightSideDirectionVector_temp.z);
+      rightSideDirectionVector = rightSideDirectionVector.clone().normalize();
+      let projectedPointOnRightSide =  findNewPositionByProjection(predicted_position, currentPosition, rightSideDirectionVector);
+    
+      //calculating projected point on left side
+      let angleOfDirectionAndCapsuleBodyNormal_Radians_Left= -angleThresholdBtwnDirectionAndNormalInDeg * (Math.PI/180);
+      let leftSideDirectionVector_temp = deviateVectorByAngle(NormalVectorToCapsuleBodyNormalized, angleOfDirectionAndCapsuleBodyNormal_Radians_Left);
+      let leftSideDirectionVector = new THREE.Vector3(leftSideDirectionVector_temp.x, 0, leftSideDirectionVector_temp.z);
+      leftSideDirectionVector = leftSideDirectionVector.clone().normalize();
+      let projectedPointOnLeftSide =  findNewPositionByProjection(predicted_position, currentPosition, leftSideDirectionVector);
+
+      // calculating distance btwn new predicted positions with old predicted position in left and right side of the capsule normal vector
+      let distPredictedAndProjectedRightSide = distance(predicted_position.x, predicted_position.z, projectedPointOnRightSide.x, projectedPointOnRightSide.z);
+      let distPredictedAndProjectedLeftSide = distance(predicted_position.x, predicted_position.z, projectedPointOnLeftSide.x, projectedPointOnLeftSide.z);
+      
+      //update agent position with whichever projected point has the shortest distance with old predicted position
+      if(distPredictedAndProjectedLeftSide >= distPredictedAndProjectedRightSide)
+      {
+        capsule_entity.px = projectedPointOnRightSide.x;
+        capsule_entity.pz = projectedPointOnRightSide.z;
+      }
+      else{
+        capsule_entity.px = projectedPointOnLeftSide.x;
+        capsule_entity.pz = projectedPointOnLeftSide.z;
+      }
+    }
+  
+    return { x: capsule_entity.px, y: 0, z: capsule_entity.pz };
+  }
+
+
 
   function getBestPointWithWall(xi, zi, wall){
 
@@ -803,234 +860,6 @@ export function step(RADIUS, sceneEntities, world, scene, customParams = {}) {
         sceneEntities[j].px += delta_correction_j.x;
         sceneEntities[j].pz += delta_correction_j.y;
 
-// -------------- Start --------------------- for calculating normal to capsule body --- Capsule A ----------------------
-    // For capsule A
-    let iCoords = rotateLineSegment(
-      sceneEntities[i].x,
-      sceneEntities[i].z + agentLength + RADIUS,
-      sceneEntities[i].x,
-      sceneEntities[i].z - agentLength - RADIUS,
-      sceneEntities[i].agent.rotation.z
-    );
-
-    // Agent A
-    const aa = {
-    tip: new THREE.Vector3(iCoords[0], 0, iCoords[1]),
-    base: new THREE.Vector3(iCoords[2], 0, iCoords[3]),
-    radius: RADIUS,
-    real_tip: null,
-    real_base: null
-    };
-
-    // capsule A:
-    let a_Normal = aa.tip.clone().sub(aa.base.clone()).normalize();
-    const a_LineEndOffset = a_Normal.clone().multiplyScalar(aa.radius);
-    const a_A = aa.base.clone().add(a_LineEndOffset);
-    const a_B = aa.tip.clone().sub(a_LineEndOffset);
-    aa.real_tip = a_B;
-    aa.real_base = a_A;
-
-    // Calculate the slope of the line
-    const dx = aa.base.x - aa.tip.x;
-    const dz = aa.base.z - aa.tip.z  ;
-
-    // Get the length of the line segment
-    let leng = Math.sqrt(dx*dx + dz*dz);
-
-    // Generate a normal vector (-dy, dx) 
-    // This will be perpendicular to the line
-    let nx = -dz / leng;  
-    let nz = dx / leng;
-
-    //------------end-------------------------------------------------
-
-    // Normal vector to casule body
-    let normal_to_capsule = new THREE.Vector3(nx, 0, nz);
-    sceneEntities[i].normal_to_capsule = normal_to_capsule;
-  
-    var currentPosition = new THREE.Vector3(sceneEntities[i].x, 0, sceneEntities[i].z);
-    var predicted_position = new THREE.Vector3(sceneEntities[i].px, 0, sceneEntities[i].pz);
-    var displacementVector = predicted_position.clone().sub(currentPosition);
-    var directionOfMovement = displacementVector.clone().normalize();
-    var directionVector = new THREE.Vector3(directionOfMovement.x, 0, directionOfMovement.z);
-
-    let angle_6 = angleBetweenVectors_2(directionVector, normal_to_capsule);
-
-// =============== restrict big orientation change for Capsule A ==== Start =======================  
-    if(angle_6 > angle_threshold && sceneEntities[i].x < 20 )
-    {
-      // console.log("before, angle_6: ", angle_6);
-      let normal_to_capsule_vec = new THREE.Vector3(normal_to_capsule.x, 0, normal_to_capsule.z);
-      let normal_to_capsule_vec_normalized = normal_to_capsule_vec.clone().normalize();
-
-      let theta = angle_threshold * (Math.PI/180);
-      let w_r = getNewVectorDeviatedFromAnother(normal_to_capsule_vec_normalized, theta);
-      let w_r_direc = new THREE.Vector3(w_r.x, 0, w_r.z);
-      w_r_direc = w_r_direc.clone().normalize();
-
-      let new_point_right =  findNewPositionByProjecttion(predicted_position, currentPosition, w_r_direc);
-     
-      //checking whether projected point is correct or not by checking angle with new position vector and capsule normal.
-      // var result2 = new THREE.Vector3();
-      // result2.subVectors(currentPosition, new_point_right);
-      // result2.clone().normalize();
-      // let angl2 = angleBetweenVectors_2(result2, normal_to_capsule_vec_normalized);
-      // console.log("result2: ", result2);
-      // console.log("angl2: ", new_point_right, "");
-
-      let theta_left = -angle_threshold * (Math.PI/180);
-      let w_l = getNewVectorDeviatedFromAnother(normal_to_capsule_vec_normalized, theta_left);
-      let w_l_direc = new THREE.Vector3(w_l.x, 0, w_l.z);
-      w_l_direc = w_l_direc.clone().normalize();
-
-      let new_point_left =  findNewPositionByProjecttion(predicted_position, currentPosition, w_l_direc);
-
-      // var result = new THREE.Vector3();
-      // result.subVectors(currentPosition, new_point_left);
-      // let angl = angleBetweenVectors_2(result, normal_to_capsule);
-
-      let temp_dist_right = distance(predicted_position.x, predicted_position.z, new_point_right.x, new_point_right.z);
-      let temp_dist_left = distance(predicted_position.x, predicted_position.z, new_point_left.x, new_point_left.z);
-
-      if(temp_dist_left >= temp_dist_right)
-      {
-        sceneEntities[i].px = new_point_right.x;
-        sceneEntities[i].pz = new_point_right.z;
-      }
-      else{
-          sceneEntities[i].px = new_point_left.x;
-          sceneEntities[i].pz = new_point_left.z;
-        }
-
-
-      //checking current angle (after fix)
-    // var currentPosition = new THREE.Vector3(sceneEntities[i].x, 0, sceneEntities[i].z);
-    // var predicted_position = new THREE.Vector3(sceneEntities[i].px, 0, sceneEntities[i].pz);
-    // var displacementVector = predicted_position.clone().sub(currentPosition);
-    // var directionOfMovement = displacementVector.clone().normalize();
-    // var directionVector = new THREE.Vector3(directionOfMovement.x, 0, directionOfMovement.z);
-
-    // let angle_after = angleBetweenVectors_2(directionVector, normal_to_capsule);
-    // console.log("angle_6 after : ", angle_after, "\n "); 
-    }
-
-// =============== restrict big orientation change for Capsule A ==== End =======================    
-
-    
-    // ------------------------------------------------------------------------------------------
-
-    // For capsule B
-    let jCoords = rotateLineSegment(
-      sceneEntities[j].x,
-      sceneEntities[j].z + agentLength + RADIUS,
-      sceneEntities[j].x,
-      sceneEntities[j].z - agentLength - RADIUS,
-      sceneEntities[j].agent.rotation.z
-    );
-
-    // Agent B
-    const bb = {
-      tip: new THREE.Vector3(jCoords[0], 0, jCoords[1]),
-      base: new THREE.Vector3(jCoords[2], 0, jCoords[3]),
-      radius: RADIUS,
-      real_tip: null,
-      real_base: null
-      };
-
-    // capsule B
-    let b_Normal = bb.tip.clone().sub(bb.base.clone()).normalize();
-    const b_LineEndOffset = b_Normal.clone().multiplyScalar(bb.radius);
-    const b_B = bb.base.clone().add(b_LineEndOffset);
-    const a_B_2 = bb.tip.clone().sub(b_LineEndOffset);
-    bb.real_tip = a_B_2;
-    bb.real_base = b_B;
-
-    // Calculate the slope of the line
-    const dx_b = bb.base.x - bb.tip.x;
-    const dz_b = bb.base.z - bb.tip.z  ;
-
-    // Get the length of the line segment
-    let leng_b = Math.sqrt(dx_b*dx_b + dz_b*dz_b);
-
-    // Generate a normal vector (-dy, dx) 
-    // This will be perpendicular to the line
-    let nx_b = -dz_b / leng_b;  
-    let nz_b = dx_b / leng_b;
-
-    // Normal vector to capsule body
-    let normal_to_capsule_b = new THREE.Vector3(nx_b, 0, nz_b);
-    normal_to_capsule_b = normal_to_capsule_b.clone().normalize();
-
-    sceneEntities[j].normal_to_capsule = normal_to_capsule_b;
-
-    var currentPosition = new THREE.Vector3(sceneEntities[j].x, 0, sceneEntities[j].z);
-    var predicted_position = new THREE.Vector3(sceneEntities[j].px, 0, sceneEntities[j].pz);
-    var displacementVector = predicted_position.clone().sub(currentPosition);
-    var directionOfMovement = displacementVector.clone().normalize();
-    var directionVector = new THREE.Vector3(directionOfMovement.x, 0, directionOfMovement.z);
-
-    let angle_4_b = angleBetweenVectors_2(directionVector, normal_to_capsule_b);
-    // console.log("angle_4_b: ", angle_4_b);
-
-
-// =============== restrict big orientation change for Capsule B ==== Start =======================
-
-  if(angle_4_b > angle_threshold)
-  {
-    // console.log("before, angle_4_b: ", angle_4_b);
-    let normal_to_capsule_vec_b = new THREE.Vector3(normal_to_capsule_b.x, 0, normal_to_capsule_b.z);
-    let normal_to_capsule_vec_normalized_b = normal_to_capsule_vec_b.clone().normalize();
-
-    let theta_right = angle_threshold * (Math.PI/180);
-    let w_r_b = getNewVectorDeviatedFromAnother(normal_to_capsule_vec_normalized_b, theta_right);
-    let w_r_direc_b = new THREE.Vector3(w_r_b.x, 0, w_r_b.z);
-    w_r_direc_b = w_r_direc_b.clone().normalize();
-
-    let new_point_right =  findNewPositionByProjecttion(predicted_position, currentPosition, w_r_direc_b);
-
-    //  check whether angle after projecting predicted position over direction vector right or not.
-    //  var result = new THREE.Vector3();
-    //  result.subVectors(new_point_right, currentPosition);
-    //  let angl = angleBetweenVectors_2(normal_to_capsule_vec_normalized_b, result);
-    //  console.log("angl: ", angl);
-
-    let theta_left = -angle_threshold * (Math.PI/180);
-    let w_l = getNewVectorDeviatedFromAnother(normal_to_capsule_vec_normalized_b, theta_left);
-    let w_l_direc = new THREE.Vector3(w_l.x, 0, w_l.z);
-    w_l_direc = w_l_direc.clone().normalize();
-
-    let new_point_left =  findNewPositionByProjecttion(predicted_position, currentPosition, w_l_direc);
-
-    let temp_dist_right = distance(predicted_position.x, predicted_position.z, new_point_right.x, new_point_right.z);
-    let temp_dist_left = distance(predicted_position.x, predicted_position.z, new_point_left.x, new_point_left.z);
-
-    if(temp_dist_left > temp_dist_right)
-    {
-      sceneEntities[j].px = new_point_right.x;
-      sceneEntities[j].pz = new_point_right.z;
-    }
-    else{
-        sceneEntities[j].px = new_point_left.x;
-        sceneEntities[j].pz = new_point_left.z;
-      }
-
-
-  //checking current angle (after fix)
-// var currentPosition = new THREE.Vector3(sceneEntities[j].x, 0, sceneEntities[j].z);
-// var predicted_position = new THREE.Vector3(sceneEntities[j].px, 0, sceneEntities[j].pz);
-// var displacementVector = predicted_position.clone().sub(currentPosition);
-// var directionOfMovement = displacementVector.clone().normalize();
-// var directionVector = new THREE.Vector3(directionOfMovement.x, 0, directionOfMovement.z);
-
-// let angle_after = angleBetweenVectors_2(directionVector, normal_to_capsule_b);
-// console.log("angle_4_b after : ", angle_after, "\n ");
-}
-
-// =============== restrict big orientation change for Capsule B ===== End =======================
-
-// ------------------ END ----------------- for calculating normal to capsule body ----------------------
-
-
         // for utilities
         sceneEntities[i].grad.x += grad_i[0];
         sceneEntities[i].grad.z += grad_i[1];
@@ -1048,35 +877,12 @@ export function step(RADIUS, sceneEntities, world, scene, customParams = {}) {
         customParams.best[i][j] = [bestA, bestB]
         customParams.best[j][i] = [bestB, bestA]
 
-        // short range collision
-        // didn't correct position in real time
-        // let penetration_normal = bestA.clone().sub(bestB);
-        // const len = penetration_normal.length();
-        // penetration_normal.divideScalar(len); // normalize
-        // const penetration_depth = sceneEntities[i].radius + sceneEntities[j].radius - len;
-        // const intersects = penetration_depth > 0;
-        // if (intersects) {
-        //   sceneEntities[i].colliding = true;
-        //   sceneEntities[j].colliding = true;
-        //
-        //   sceneEntities[i].px += penetration_normal.x * 0.5 * penetration_depth;
-        //   sceneEntities[i].pz += penetration_normal.y * 0.5 * penetration_depth;
-        //
-        //   sceneEntities[j].px +=
-        //       -1 * penetration_normal.x * 0.5 * penetration_depth;
-        //   sceneEntities[j].pz +=
-        //       -1 * penetration_normal.y * 0.5 * penetration_depth;
-        // }
-
         j += 1;
       }
 
       i += 1;
     }
 //======================================== our Long-range call ended ===============================================================
-
-
-
 
   
     i = 0;
@@ -1094,14 +900,28 @@ export function step(RADIUS, sceneEntities, world, scene, customParams = {}) {
     }
 
 
+    //Rotation constraint
+    i = 0;
+    while (i < sceneEntities.length) {
+    
+      let corrected_position = rotationConstraint(sceneEntities[i]);
+      
+      sceneEntities[i].px = corrected_position.x;
+      sceneEntities[i].pz = corrected_position.z;
+     
+      i += 1;
+    }
+
+
+
+
+
+
     pbdIters += 1;
   }
 
 
   sceneEntities.forEach(function (item) {
-
-    // const dx = item.goal_x - item.x;
-    // const dz = item.goal_z - item.z;
 
     const dx = item.px - item.x;
     const dz = item.pz - item.z;
