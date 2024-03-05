@@ -591,51 +591,7 @@ function init() {
 
   }
 
-  //********************************************************* Trying scenario 1 *********************************************************
-  // Time: 0.06 seconds of the video
 
-  function tryingScenario_Bilas_1() {
-    for (let i = 0; i < 5; i++) {
-      for (let j = 0; j < 3; j++) {
-        addColumnAgentGroup(
-            agentData,
-            1,
-            RADIUS * 1.5,
-            {
-              x: 38 - i * 6,
-              //x: 30,
-              z: -10 + j * 6,
-            },
-            {
-              x: -999,
-              //x: -20,
-              z: -10 + j * 6,
-            },
-            0.8,
-            "X"
-        );
-
-        addColumnAgentGroup(
-            agentData,
-            1,
-            RADIUS * 1.5,
-            {
-              x: -38 + i * 6,
-              //x: 30,
-              z: -6 + j * 6,
-            },
-            {
-              x: 999,
-              //x: -20,
-              z: -6 + j * 6,
-            },
-            0.8,
-            "X"
-        );
-
-      }
-    }
-  }
 
   function tryingScenario_Bilas_1_oneway() {
     for (let i = 0; i < 5; i++) {
@@ -967,7 +923,7 @@ function init() {
 
 
 
-  function tryingScenario_Bilas_2_agents_testing_orientation() {
+  function hallway_facing_2_agents_scenario() {
 
     addColumnAgentGroup(
       agentData,
@@ -1001,91 +957,13 @@ function init() {
       "X"
   );
 
-//   addColumnAgentGroup(
-//     agentData,
-//     1,
-//     RADIUS * 1.5,
-//     {
-//       x: 0,
-//       z: 2,
-//     },
-//     {
-//       x: 0.5,
-//       z: 2,
-//     },
-//     0.8,
-//     "X"
-// );
-
-
-
-    // addColumnAgentGroup(
-    //     agentData,
-    //     1,
-    //     RADIUS * 1.5,
-    //     {
-    //       x: 20,
-    //       z: 0,
-    //     },
-    //     {
-    //       x: -38,
-    //       z: 0,
-    //     },
-    //     0.8,
-    //     "X"
-    // );
-    // addColumnAgentGroup(
-    //     agentData,
-    //     1,
-    //     RADIUS * 1.5,
-    //     {
-    //       x: -20,
-    //       z: 8,
-    //     },
-    //     {
-    //       x: 38,
-    //       z: -10,
-    //     },
-    //     0.8,
-    //     "X"
-    // );
-
-
-  //   addColumnAgentGroup(
-  //     agentData,
-  //     1,
-  //     RADIUS * 1.5,
-  //     {
-  //       x: 20,
-  //       z: 0,
-  //     },
-  //     {
-  //       x: -38,
-  //       z: 0,
-  //     },
-  //     0.8,
-  //     "X"
-  // );
-  // addColumnAgentGroup(
-  //     agentData,
-  //     1,
-  //     RADIUS * 1.5,
-  //     {
-  //       x: 0,
-  //       z: 15,
-  //     },
-  //     {
-  //       x: 8,
-  //       z: -15,
-  //     },
-  //     0.8,
-  //     "X"
-  // );
-
   }
 
 
-  function tryingScenario_Bilas_testing_orientation_3_AND_4_agents() {
+
+
+
+  function tryingScenario_Bilas_testing_orientation_4_agents() {
 
     addColumnAgentGroup(
       agentData,
@@ -1154,433 +1032,139 @@ function init() {
   }  
 
 
-//********************************************************* Trying scenario 2 *********************************************************
 
-//********************************************************* Trying scenario 3 *********************************************************
-  // Time: 5:11 seconds of the video: https://youtu.be/iC8KHkoZR8k?t=314
+  function hallway_facing_3_agents_scenario() {
 
-  function tryingScenario_Bilas_3() {
+    addColumnAgentGroup(
+      agentData,
+      1,
+      RADIUS * 1.5,
+      {
+        x: 20,
+        z: 0,
+      },
+      {
+        x: -38,
+        z: 0,
+      },
+      0.8,
+      "X"
+  );
 
-    for (let i = 0; i < 5; i++) {
-      for (let j = 0; j < 3; j++) {
-        addColumnAgentGroup(
-            agentData,
-            1,
-            RADIUS * 1.5,
-            {
-              x: 10 - i * 6,
-              //x: 30,
-              z: 20 - j * 6,
-            },
-            {
-              x: 10 - i * 6,
-              //x: -20,
-              z: -999,
-            },
-            0.8,
-            "X"
-        );
+  addColumnAgentGroup(
+    agentData,
+    1,
+    RADIUS * 1.5,
+    {
+      x: 20,
+      z: 6,
+    },
+    {
+      x: -38,
+      z: 6,
+    },
+    0.8,
+    "X"
+);
 
-      }
-    }
+  addColumnAgentGroup(
+      agentData,
+      1,
+      RADIUS * 1.5,
+      {
+        x: -20,
+        z: 3,
+      },
+      {
+        x: 38,
+        z: 3,
+      },
+      0.8,
+      "X"
+  );
 
-      // experiment border
-      const boxGeometry1 = new THREE.BoxGeometry(31, 5, 1);
-      const boxMaterial1 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
-      const left = new THREE.Mesh(boxGeometry1, boxMaterial1);
-      left.position.set(20, 2.5, 0);
-
-      wallData.push({
-          center: new THREE.Vector3(20, 2.5, 0),
-          depth: 1, // along z-axis
-          width: 31, // along x-axis
-          base: new THREE.Vector3(20 - 31/2, 2.5, 0),
-          tip: new THREE.Vector3(20 + 31/2, 2.5, 0),
-      });
-
-      const boxGeometry2 = new THREE.BoxGeometry(1, 5, 50);
-      const boxMaterial2 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
-      const bottom = new THREE.Mesh(boxGeometry2, boxMaterial2);
-      //bottom.position.set(-15, 2.5, 0);
-      bottom.position.set(-15, 2.5, -25);
-
-      wallData.push({
-          center: new THREE.Vector3(-15, 2.5, -25),
-          depth: 50, // along z-axis
-          width: 1, // along x-axis
-          base: new THREE.Vector3(-15, 2.5, -25 - 50/2),
-          tip: new THREE.Vector3(-15, 2.5, -25 + 50 / 2),
-      });
-
-      const boxGeometry3 = new THREE.BoxGeometry(1, 5, 50);
-      const boxMaterial3 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
-      const top = new THREE.Mesh(boxGeometry3, boxMaterial3);
-      top.position.set(5, 2.5, -25);
-      wallData.push({
-          center: new THREE.Vector3(5, 2.5, -25),
-          depth: 50, // along z-axis
-          width: 1, // along x-axis
-          base: new THREE.Vector3(5, 2.5, -25 - 50/2),
-          tip: new THREE.Vector3(5, 2.5, -25 + 50/2),
-      });
-
-      const boxGeometry4 = new THREE.BoxGeometry(31, 5, 1);
-      const boxMaterial4 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
-      const right = new THREE.Mesh(boxGeometry4, boxMaterial4);
-      right.position.set(-30, 2.5, 0);
-      wallData.push({
-          center: new THREE.Vector3(-30, 2.5, 0),
-          depth: 1, // along z-axis
-          width: 31, // along x-axis
-          base: new THREE.Vector3(-30 - 31 / 2, 2.5, 0),
-          tip: new THREE.Vector3(-30 + 31 / 2, 2.5, 0),
-      });
-
-      scene.add(left);
-      scene.add(bottom);
-      scene.add(top);
-      scene.add(right);
-
-      parameters.wallData = wallData;
-
-  }
-
-    function tryingScenario_Bilas_3_debug() {
-
-        // addColumnAgentGroup(
-        //     agentData,
-        //     1,
-        //     RADIUS * 1.5,
-        //     {
-        //         x: 9,
-        //         //x: 30,
-        //         z: 14,
-        //     },
-        //     {
-        //         x: 9,
-        //         //x: -20,
-        //         z: -999,
-        //     },
-        //     0.8,
-        //     "X"
-        // );
-
-        for (let i = 0; i < 1; i++) {
-            for (let j = 0; j < 2; j++) {
-                addColumnAgentGroup(
-                    agentData,
-                    1,
-                    RADIUS * 1.5,
-                    {
-                        x: 10 - i * 6,
-                        //x: 30,
-                        z: 20 - j * 6,
-                    },
-                    {
-                        x: 10 - i * 6,
-                        //x: -20,
-                        z: -999,
-                    },
-                    0.8,
-                    "X"
-                );
-
-            }
-    }
-
-        // experiment border
-        const boxGeometry1 = new THREE.BoxGeometry(31, 5, 1);
-        const boxMaterial1 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
-        const left = new THREE.Mesh(boxGeometry1, boxMaterial1);
-        left.position.set(20, 2.5, 0);
-
-        wallData.push({
-            center: new THREE.Vector3(20, 2.5, 0),
-            depth: 1, // along z-axis
-            width: 31, // along x-axis
-            base: new THREE.Vector3(20 - 31/2, 2.5, 0),
-            tip: new THREE.Vector3(20 + 31/2, 2.5, 0),
-        });
-
-        const boxGeometry2 = new THREE.BoxGeometry(1, 5, 50);
-        const boxMaterial2 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
-        const bottom = new THREE.Mesh(boxGeometry2, boxMaterial2);
-        //bottom.position.set(-15, 2.5, 0);
-        bottom.position.set(-15, 2.5, -25);
-
-        wallData.push({
-            center: new THREE.Vector3(-15, 2.5, -25),
-            depth: 50, // along z-axis
-            width: 1, // along x-axis
-            base: new THREE.Vector3(-15, 2.5, -25 - 50/2),
-            tip: new THREE.Vector3(-15, 2.5, -25 + 50 / 2),
-        });
-
-        const boxGeometry3 = new THREE.BoxGeometry(1, 5, 50);
-        const boxMaterial3 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
-        const top = new THREE.Mesh(boxGeometry3, boxMaterial3);
-        top.position.set(5, 2.5, -25);
-        wallData.push({
-            center: new THREE.Vector3(5, 2.5, -25),
-            depth: 50, // along z-axis
-            width: 1, // along x-axis
-            base: new THREE.Vector3(5, 2.5, -25 - 50/2),
-            tip: new THREE.Vector3(5, 2.5, -25 + 50/2),
-        });
-
-        const boxGeometry4 = new THREE.BoxGeometry(31, 5, 1);
-        const boxMaterial4 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
-        const right = new THREE.Mesh(boxGeometry4, boxMaterial4);
-        right.position.set(-30, 2.5, 0);
-        wallData.push({
-            center: new THREE.Vector3(-30, 2.5, 0),
-            depth: 1, // along z-axis
-            width: 31, // along x-axis
-            base: new THREE.Vector3(-30 - 31 / 2, 2.5, 0),
-            tip: new THREE.Vector3(-30 + 31 / 2, 2.5, 0),
-        });
-
-        scene.add(left);
-        scene.add(bottom);
-        scene.add(top);
-        scene.add(right);
-
-        parameters.wallData = wallData;
-
-    }
-
-//********************************************************* Trying scenario 3 *********************************************************
-
-    function tryingScenario_Bilas_4_agents() {
-
-        addColumnAgentGroup(
-            agentData,
-            1,
-            RADIUS * 1.5,
-            {
-                x: 20,
-                z: 2,
-            },
-            {
-                x: -999,
-                z: 2,
-            },
-            0.8,
-            "X"
-        );
-        addColumnAgentGroup(
-            agentData,
-            1,
-            RADIUS * 1.5,
-            {
-                x: 20,
-                z: 5,
-            },
-            {
-                x: -999,
-                z: 5,
-            },
-            0.8,
-            "X"
-        );
-        //-----------------------------------------------
-
-        addColumnAgentGroup(
-            agentData,
-            1,
-            RADIUS * 4,
-            {
-                x: -20,
-                z: 1
-            },
-            {
-                x: 999,
-                z: 1
-            },
-            0.8,
-            "X"
-        );
-
-        addColumnAgentGroup(
-            agentData,
-            1,
-            RADIUS * 4,
-            {
-                x: -20,
-                z: 6
-            },
-            {
-                x: 999,
-                z: 6
-            },
-            0.8,
-            "X"
-        );
-
-    }
-
-    function tryingScenario_3_Bilas_Capsule() {
-      parameters.scenario = 'bottleneck';
-
-    //   for (let i = 0; i < 9; i++) {
-    //     for (let j = 0; j < 6; j++) {
-    //         addColumnAgentGroup(
-    //             agentData,
-    //             1,
-    //             RADIUS * 1.5,
-    //             {
-    //                 x: 15 - i * 5,
-    //                 //x: 30,
-    //                 z: 42 - j * 5,
-    //             },
-    //             {
-    //                 x: 10 - i * 5,
-    //                 //x: -20,
-    //                 z: -999,
-    //             },
-    //             0.8,
-    //             "X"
-    //         );
-
-    //     }
-    // }
+  }  
 
 
-//tried with this one and worked somewhat good. but change of facing angle is not correct.
-    //   for (let i = 0; i < 9; i++) {
-    //     for (let j = 0; j < 6; j++) {
+function hallway_facing_4_agents_scenario() {
 
-    //         addColumnAgentGroup(
-    //             agentData,
-    //             1,
-    //             RADIUS * 1.5,
-    //             {
-    //                 x: 15 - i * 5,
-    //                 z: 42 - j * 5,
-    //             },
-    //             {
-    //                 x: -4,
-    //                 z: 4,
-    //             },
-    //             0.8,
-    //             "X"
-    //         );
+  addColumnAgentGroup(
+    agentData,
+    1,
+    RADIUS * 1.5,
+    {
+      x: 20,
+      z: 0,
+    },
+    {
+      x: -38,
+      z: 0,
+    },
+    0.8,
+    "X"
+);
 
-    //     }
-    // }
-
-
-// //working latest
-//     for (let i = 0; i < 9; i++) {
-//       for (let j = 0; j < 6; j++) {
-
-//           addColumnAgentGroup(
-//               agentData,
-//               1,
-//               RADIUS * 1.5,
-//               {
-//                   x: 15 - i * 5,
-//                   z: 42 - j * 5,
-//               },
-//               {
-//                   x: -4,
-//                   z: -140,
-//               },
-//               0.8,
-//               "X"
-//           );
-
-//       }
-//   }
-
-
-
-/*
-//working latest - 2
-for (let i = 0; i < 9; i++) {
-  for (let j = 0; j < 6; j++) {
-
-  let minCeiled = Math.ceil(-3.5);
-  let maxFloored = Math.floor(-5);
-  let num = Math.floor(Math.random() * (maxFloored - minCeiled) + minCeiled); 
-  let x_goal = 0.0;
-
-  if(i < 3)
+addColumnAgentGroup(
+  agentData,
+  1,
+  RADIUS * 1.5,
   {
-     x_goal = -3.5;
-  }else if(i>2 && i< 6)
+    x: 20,
+    z: 6,
+  },
   {
-     x_goal = -5.0;
-  }else
+    x: -38,
+    z: 6,
+  },
+  0.8,
+  "X"
+);
+
+addColumnAgentGroup(
+    agentData,
+    1,
+    RADIUS * 1.5,
+    {
+      x: -20,
+      z: 3,
+    },
+    {
+      x: 38,
+      z: 3,
+    },
+    0.8,
+    "X"
+);
+
+addColumnAgentGroup(
+  agentData,
+  1,
+  RADIUS * 1.5,
   {
-     x_goal = -7.0;
-  }
+    x: -20,
+    z: 9,
+  },
+  {
+    x: 38,
+    z: 9,
+  },
+  0.8,
+  "X"
+  );
 
-  // console.log("x: ", 15 - i * 5, ", z: ", 42 - j * 5);
+}  
 
-      addColumnAgentGroup(
-          agentData,
-          1,
-          RADIUS * 1.5,
-          {
-              x: 15 - i * 5,
-              z: 42 - j * 5,
-          },
-          {
-              // x: -4.3,
-              x: x_goal,
-              z: 4,
-          },
-          0.8,
-          "X"
-      );
 
-  }
-  // console.log("\n");
-}
-*/
+
+function bottleneck_with_wall_scenario() {
+parameters.scenario = 'bottleneck';
 
 //working latest - 3
 for (let i = 0; i < 9; i++) {
   for (let j = 0; j < 6; j++) {
 
   let x_goal = 0.0;
-
-  // if(i < 2)
-  // {
-  //    x_goal = -2.7;
-  // }else if(i>1 && i< 4)
-  // {
-  //    x_goal = -3.0;
-  // }else if(i>3 && i< 5)
-  // {
-  //    x_goal = -5.0;
-  // }else if(i>4 && i< 7)
-  // {
-  //   x_goal = -7.0;
-  // }else{
-  //   x_goal = -7.3;
-  // }
-
-
-  // if(i < 2)
-  // {
-  //    x_goal = -1.5;
-  // }else if(i>1 && i< 4)
-  // {
-  //    x_goal = -3.0;
-  // }else if(i>3 && i< 5)
-  // {
-  //    x_goal = -5.0;
-  // }else if(i>4 && i< 7)
-  // {
-  //   x_goal = -7.0;
-  // }else{
-  //   x_goal = -8.3;
-  // }
-
   
-  // commented on 03-03-2024
   if(i < 2)
   {
      x_goal = -2.0;
@@ -1597,25 +1181,6 @@ for (let i = 0; i < 9; i++) {
     x_goal = -7.6;
   }
 
-
-  // if(i < 2)
-  // {
-  //    x_goal = -3.2;
-  // }else if(i>1 && i< 4)
-  // {
-  //    x_goal = -3.2;
-  // }else if(i>3 && i< 5)
-  // {
-  //    x_goal = -4.0;
-  // }else if(i>4 && i< 7)
-  // {
-  //   x_goal = -5.0;
-  // }else{
-  //   x_goal = -5.0;
-  // }
-
-
-  // console.log("x: ", 15 - i * 5, ", z: ", 42 - j * 5);
 
       addColumnAgentGroup(
           agentData,
@@ -1638,248 +1203,7 @@ for (let i = 0; i < 9; i++) {
       );
 
   }
-  // console.log("\n");
 }
-
-
-/*
-addColumnAgentGroup(
-  agentData,
-  1,
-  RADIUS * 1.5,
-  {
-    x: 0,
-    z: 4.5
-  },
-  {
-      x: 0,
-      z: 2,
-  },
-  0.8,
-  "X"
-);
-
-addColumnAgentGroup(
-  agentData,
-  1,
-  RADIUS * 1.5,
-  {
-    x: -5,
-    z: 4.5
-  },
-  {
-      x: -5,
-      z: 4,
-  },
-  0.8,
-  "X"
-);
-
-addColumnAgentGroup(
-  agentData,
-  1,
-  RADIUS * 1.5,
-  {
-    x: -10,
-    z: 4.5
-  },
-  {
-      x: -10,
-      z: 2,
-  },
-  0.8,
-  "X"
-);
-*/
-
-/*
-//------------ start ---03-01-204
-addColumnAgentGroup(
-  agentData,
-  1,
-  RADIUS * 1.5,
-  {
-      // x: 24,
-      // z: 20,
-      x: 14,
-      z: 10,
-  },
-  {
-      x: -4,
-      z: 4,
-  },
-  0.8,
-  "X"
-);
-
-addColumnAgentGroup(
-agentData,
-1,
-RADIUS * 1.5,
-{
-    x: -28,
-    z: 20,
-},
-{
-    x: -4,
-    z: 4,
-},
-0.8,
-"X"
-);
-//---------end--------03-01-2024
-
-*/
-
-
-/*
-//single and 2 agents
-                addColumnAgentGroup(
-                agentData,
-                1,
-                RADIUS * 1.5,
-                {
-                    // x: 24,
-                    // z: 20,
-                    x: 14,
-                    z: 10,
-                },
-                {
-                    x: -4,
-                    z: -40,
-                },
-                0.8,
-                "X"
-            );
-
-            addColumnAgentGroup(
-              agentData,
-              1,
-              RADIUS * 1.5,
-              {
-                  x: -28,
-                  z: 20,
-              },
-              {
-                  x: -4,
-                  z: -40,
-              },
-              0.8,
-              "X"
-          );
-*/
-
-//single and 2 agents - closer
-        //   addColumnAgentGroup(
-        //     agentData,
-        //     1,
-        //     RADIUS * 1.5,
-        //     {
-        //         // x: 24,
-        //         // z: 20,
-        //         x: 14,
-        //         z: 10,
-        //     },
-        //     {
-        //         x: -4,
-        //         z: 4,
-        //     },
-        //     0.8,
-        //     "X"
-        // );
-
-        //     addColumnAgentGroup(
-        //       agentData,
-        //       1,
-        //       RADIUS * 1.5,
-        //       {
-        //           x: -14,
-        //           z: 10,
-        //       },
-        //       {
-        //           x: -4,
-        //           z: 4,
-        //       },
-        //       0.8,
-        //       "X"
-        //   );
-
-
-
-            //   addColumnAgentGroup(
-            //     agentData,
-            //     1,
-            //     RADIUS * 1.5,
-            //     {
-            //         x: 24,
-            //         z: 20,
-            //     },
-            //     {
-            //         x: -4,
-            //         z: -40,
-            //     },
-            //     0.8,
-            //     "X"
-            // );
-
-
-
-           // this
-
-            //   addColumnAgentGroup(
-            //     agentData,
-            //     1,
-            //     RADIUS * 1.5,
-            //     {
-            //         x: 24,
-            //         z: 20,
-            //     },
-            //     {
-            //         x: -4,
-            //         z: -100,
-            //     },
-            //     0.8,
-            //     "X"
-            // );
-
-
-  //   addColumnAgentGroup(
-  //     agentData,
-  //     1,
-  //     RADIUS * 1.5,
-  //     {
-  //         x: -4,
-  //         z: 4,
-  //     },
-  //     {
-  //         x: 10 - i * 5,
-  //         z: -999,
-  //     },
-  //     0.8,
-  //     "X"
-  // );
-
-
-
-
-        //     addColumnAgentGroup(
-        //     agentData,
-        //     1,
-        //     RADIUS * 1.5,
-        //     {
-        //         // x: 24,
-        //         // z: 20,
-        //         x: 14,
-        //         z: 10,
-        //     },
-        //     {
-        //         x: -4,
-        //         z: 4,
-        //     },
-        //     0.8,
-        //     "X"
-        // );
-
 
 
         // experiment border
@@ -1942,6 +1266,54 @@ RADIUS * 1.5,
         parameters.wallData = wallData;
 
     }
+
+
+
+  //********************************************************* Trying scenario 1 *********************************************************
+  // Time: 0.06 seconds of the video
+
+  function hallway_facing_30_agents_scenario() {
+    for (let i = 0; i < 5; i++) {
+      for (let j = 0; j < 3; j++) {
+        addColumnAgentGroup(
+            agentData,
+            1,
+            RADIUS * 1.5,
+            {
+              x: 38 - i * 6,
+              //x: 30,
+              z: -10 + j * 6,
+            },
+            {
+              x: -999,
+              //x: -20,
+              z: -10 + j * 6,
+            },
+            0.8,
+            "X"
+        );
+
+        addColumnAgentGroup(
+            agentData,
+            1,
+            RADIUS * 1.5,
+            {
+              x: -38 + i * 6,
+              //x: 30,
+              z: -6 + j * 6,
+            },
+            {
+              x: 999,
+              //x: -20,
+              z: -6 + j * 6,
+            },
+            0.8,
+            "X"
+        );
+
+      }
+    }
+  }
 
 
     function tryingScenario_4_Bilas_Capsule() {
@@ -2162,34 +1534,27 @@ RADIUS * 1.5,
   goalY = 20;
   world.distanceConstraints = [];
 
-  // defaultScenario();
-  // testScenario();
-  // testCrossScenario();
-  // testCrossWithDiagnoScenario();
-  // testHallwayScenario();
-  // testCrossScenario();
-  // circleScenario();
 
-  // tryingScenario_Bilas_1();
-  // tryingScenario_Bilas_1_oneway();
 
-  // tryingScenario_Bilas_4_agents_sphere();
 
-  // tryingScenario_Bilas_2_agents();
-  // tryingScenario_Bilas_2_agents_testing_orientation();
 
-  tryingScenario_Bilas_testing_orientation_3_AND_4_agents();
 
-  // tryingScenario_Bilas_3();
-  // tryingScenario_Bilas_3_debug();
+//----------------------------------------------------------
+//uncomment any of the 5 scenarios below to test in different scenarios.
 
-  // tryingScenario_Bilas_4_agents();
-  // tryingScenario_Bilas_1_4_agents_V2();
+ hallway_facing_2_agents_scenario();
+  // hallway_facing_3_agents_scenario();
+  // hallway_facing_4_agents_scenario();
+  // bottleneck_with_wall_scenario();     
+  // hallway_facing_30_agents_scenario();
 
-  // tryingScenario_3_Bilas_Capsule();     // use this version for the wall
-  // tryingScenario_4_Bilas_Capsule();
+//----------------------------------------------------------
 
-  // tryingScenario_Bilas_1_Sudden_Stop();
+
+
+
+
+
 
   let agentGeom, agentMaterial, agent;
   let spotLight, spotLightTarget;
