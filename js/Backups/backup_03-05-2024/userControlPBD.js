@@ -23,6 +23,34 @@ function angleBetweenVectors_2(v1, v2) {
 }
 
 
+// Function to calculate the angle between two vectors
+function calculateAngle(point1_x, point1_z, point2_x, point2_z, velocity_x, velocity_z){
+
+  // Calculate vectors from point1 to point2 and from point1 to the velocity
+  const vector1 = { x: point2_x - point1_x, z: point2_z - point1_z };
+  const vector2 = { x: velocity_x - point1_x, z: velocity_z - point1_z };
+
+
+  // Calculate the dot product of the two vectors
+  const dotProduct = vector1.x * vector2.x + vector1.z * vector2.z;
+
+  // Calculate the magnitudes of the vectors
+  const magnitude1 = Math.sqrt(vector1.x * vector1.x + vector1.z * vector1.z);
+  const magnitude2 = Math.sqrt(vector2.x * vector2.x + vector2.z * vector2.z);
+
+  // Calculate the cosine of the angle
+  const cosineTheta = dotProduct / (magnitude1 * magnitude2);
+
+  // Calculate the angle in radians using the arccosine
+  const angleRadians = Math.acos(cosineTheta);
+
+  // Convert the angle to degrees
+  const angleDegrees = angleRadians * (180 / Math.PI);
+
+  return angleDegrees;
+}
+
+
 // Function to get a vector direction deviated by a certain angle from a known normalized vector
 function deviateVectorByAngle(knownVector, angle) {
   // Calculate the components of the known vector
@@ -39,7 +67,6 @@ function deviateVectorByAngle(knownVector, angle) {
   var magnitude = Math.sqrt(newX * newX + newY * newY + newZ * newZ);
   return { x: newX / magnitude, y: 0, z: newZ / magnitude };
 }
-
 
 function findNewPositionByProjection(predict_point, cur_point, direction_vector) {
   // get position vector from current and precidted position
@@ -59,17 +86,24 @@ function findNewPositionByProjection(predict_point, cur_point, direction_vector)
 export function step(RADIUS, sceneEntities, world, scene, customParams = {}) {
   const AGENTSIZE = RADIUS * 2;
   const epsilon = 0.0001;
-  const timestep = 0.03; // 0.03: original; change to 0.01 for the bottleneck scenario.
+  const timestep = 0.03; // 0.03; original
   const ITERNUM = 1; // 3
   const agentLength = RADIUS;
 
   let C_TAU_MAX = 20;
   let C_TAO0 = 250; 
 
+  // const C_LONG_RANGE_STIFF = 0.04;  //previously used before experimenting for orientation
+  // const MAX_DELTA = 0.05;
+
+  // const C_LONG_RANGE_STIFF = 0.08;  
+  // const MAX_DELTA = 0.03;
+
   const C_LONG_RANGE_STIFF = 0.25;  
   const MAX_DELTA = 0.03;
 
-  let angleThresholdBtwnDirectionAndNormalInDeg = 0.06;  
+  let angleThresholdBtwnDirectionAndNormalInDeg = 0.06;   //angle less or equal to 0.12 doesn't work.
+  // angleThresholdBtwnDirectionAndNormalInDeg = 0.2;  //that was also working good in case of wall scenario.  0.2 or 0.15;
 
   // collision functions
   function rotateLineSegment(x1, y1, x2, y2, r) {
@@ -118,6 +152,7 @@ export function step(RADIUS, sceneEntities, world, scene, customParams = {}) {
   }
 
   function is_colliding_torso(x11, y11, x12, y12, x21, y21, x22, y22) {
+    // console.log(segments_distance(x11, y11, x12, y12, x21, y21, x22, y22));
     return (
       segments_distance(x11, y11, x12, y12, x21, y21, x22, y22) < 2 * RADIUS
     );
@@ -188,6 +223,17 @@ export function step(RADIUS, sceneEntities, world, scene, customParams = {}) {
     return Math.hypot(dx, dy);
   }
 
+// Function to restrict a variable to have the same sign as another variable
+function restrictToSameSign(variable, referenceVariable) {
+  if ((variable < 0 && referenceVariable > 0) || (variable > 0 && referenceVariable < 0)) {
+      variable = -variable;
+  }
+  else{
+      variable = variable;
+  }
+  return variable;
+}
+
 
 function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
 
@@ -198,6 +244,7 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
         agent.z - agentLength - RADIUS,
         current_rotation
       );
+      // console.log("step 1: iCoords[0]: ", iCoords[0], ", iCoords[1]: ", iCoords[1]);
 
     if(customParams.scenario==='bottleneck')
     {
@@ -209,6 +256,72 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
         current_rotation
       );
     }
+    // console.log("step 2: iCoords[0]: ", iCoords[0], ", iCoords[1]: ", iCoords[1]);
+  
+    const aa = {
+      tip: new THREE.Vector3(iCoords[0], 0, iCoords[1]),
+      base: new THREE.Vector3(iCoords[2], 0, iCoords[3]),
+      };
+    
+      // console.log("step 3: iCoords[0]: ", iCoords[0], ", iCoords[1]: ", iCoords[1], "\n\n");
+  
+      // Calculate the slope of the line
+      const dx = aa.base.x - aa.tip.x;
+      const dz = aa.base.z - aa.tip.z  ;
+  
+      let leng = Math.sqrt(dx*dx + dz*dz);
+  
+      // Generate a normal vector (-dy, dx), perpendicular to the line
+      let nx = -dz / leng;  
+      let nz = dx / leng;
+
+      // console.log("Before, nx: ", nx, "nz: ", nz);
+
+      let velocity = {x: agent.vx, y: 0, z: agent.vz};
+      // console.log("Velocity, vx: ", velocity.x, "vz: ", velocity.z, "\n\n");
+
+      //--------------------------------------------------
+      // nx = restrictToSameSign(nx, velocity.x);
+      // nz = restrictToSameSign(nz, velocity.z);
+      //--------------------------------------------------
+
+      // console.log("After, nx: ", nx, "nz: ", nz);
+      // console.log("Velocity, vx: ", velocity.x, "vz: ", velocity.z, "\n\n");
+  
+      let normal_to_capsule = new THREE.Vector3(nx, 0, nz);
+      agent.normal_to_capsule = normal_to_capsule;
+
+      
+      let angle_capsule_normal_and_vel = angleBetweenVectors_2(agent.normal_to_capsule, agent.normal_to_capsule_prev);
+
+      if(angle_capsule_normal_and_vel > 20){    // forcing normal vector to capsule body to be in the capsule's facing direction. 
+        agent.normal_to_capsule = agent.normal_to_capsule_prev;
+        // console.log("angle_capsule_normal_and_vel: ", angle_capsule_normal_and_vel);
+        // console.log("index: ", agent.index , "agent.normal_to_capsule : ", agent.normal_to_capsule, ", agent.normal_to_capsule_prev: ", agent.normal_to_capsule_prev);
+      }
+      agent.normal_to_capsule_prev = agent.normal_to_capsule;
+      
+  
+    return agent.normal_to_capsule;
+  }
+
+
+/*
+  // for narrow corridor scenario
+  function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
+
+    let iCoords = rotateLineSegment(
+        // agent.x,
+        // agent.z + agentLength + RADIUS,
+        // agent.x,
+        // agent.z - agentLength - RADIUS,
+
+        agent.z,
+        agent.x + agentLength + RADIUS,
+        agent.z,
+        agent.x - agentLength - RADIUS,
+        current_rotation
+      );
   
     const aa = {
       tip: new THREE.Vector3(iCoords[0], 0, iCoords[1]),
@@ -227,23 +340,60 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
   
       let normal_to_capsule = new THREE.Vector3(nx, 0, nz);
       agent.normal_to_capsule = normal_to_capsule;
-
-      
-      let angle_capsule_normal_and_vel = angleBetweenVectors_2(agent.normal_to_capsule, agent.normal_to_capsule_prev);
-
-      if(angle_capsule_normal_and_vel > 20){    // forcing normal vector to capsule body to be in the capsule's facing direction. 
-        agent.normal_to_capsule = agent.normal_to_capsule_prev;
-      }
-      agent.normal_to_capsule_prev = agent.normal_to_capsule;
-      
   
     return agent.normal_to_capsule;
   }
+*/
 
 
   /*  -----------------------  */
   /*  TODO modify lines below  */
   /*  -----------------------  */
+  function distanceConstraint(agent_i, agent_j, desiredDistance) {
+    const agentCentroidDist = distance(
+      agent_i.px,
+      agent_i.pz,
+      agent_j.px,
+      agent_j.pz
+    );
+    const agentDist = agentCentroidDist - desiredDistance;
+    const dir_x = (agent_j.px - agent_i.px) / agentCentroidDist;
+    const dir_z = (agent_j.pz - agent_i.pz) / agentCentroidDist;
+    const agent_i_scaler =
+      ((0.1 * agent_i.invmass) / (agent_i.invmass + agent_j.invmass)) *
+      agentDist;
+    const agent_j_scaler =
+      ((0.1 * agent_j.invmass) / (agent_i.invmass + agent_j.invmass)) *
+      agentDist;
+    if (Math.abs(agentDist) > epsilon) {
+      agent_i.px += agent_i_scaler * dir_x;
+      agent_i.pz += agent_i_scaler * dir_z;
+      agent_j.px += -agent_j_scaler * dir_x;
+      agent_j.pz += -agent_j_scaler * dir_z;
+    }
+  }
+
+  function collisionConstraint(agent_i, agent_j) {
+    const agentCentroidDist = distance(
+      agent_i.px,
+      agent_i.pz,
+      agent_j.px,
+      agent_j.pz
+    );
+    const agentDist = agentCentroidDist - AGENTSIZE;
+    const dir_x = (agent_j.px - agent_i.px) / agentCentroidDist;
+    const dir_z = (agent_j.pz - agent_i.pz) / agentCentroidDist;
+    const agent_i_scaler =
+      (agent_i.invmass / (agent_i.invmass + agent_j.invmass)) * agentDist;
+    const agent_j_scaler =
+      (agent_j.invmass / (agent_i.invmass + agent_j.invmass)) * agentDist;
+    if (agentDist < 0) {
+      agent_i.px += agent_i_scaler * dir_x;
+      agent_i.pz += agent_i_scaler * dir_z;
+      agent_j.px += -agent_j_scaler * dir_x;
+      agent_j.pz += -agent_j_scaler * dir_z;
+    }
+  }
 
 
   function collisionConstraint_Capsule(best_i, best_j, p_best_i, p_best_j) {
@@ -345,6 +495,7 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
     const d_sq = b_sq - a * c;
     const d = Math.sqrt(d_sq);
     const tao = (b - d) / a;
+    // console.log("ttc in long range paper: " + tao);
 
     let lengthV;
     let grad_x_i;
@@ -363,8 +514,10 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
       grad_y_j = -grad_y_i;
       
       // special case
+
       // rotation (facing angle) difference
       let facingDiff = Math.abs(theta_i - theta_j);
+      //console.log( "theta_i: ", theta_i, ", theta_j: ", theta_j);
 
       // best points distance difference
       let projectedPoint_j = PointOnLineSegment(agent_j.real_base, agent_j.real_tip, best_i);
@@ -372,16 +525,21 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
 
       // if facing direction on the same line AND the best points are exactly facing with each other
       // adding gradient value
-  
+      // if (bestPointDiff <= 0.01 &&  (facingDiff < 0.01 || facingDiff - Math.PI) <0.01 ){
+      // if (bestPointDiff <= 2.0 &&  (facingDiff < 0.1 || facingDiff - Math.PI) <0.1 ){      
       // if (bestPointDiff <= 4.0 &&  (facingDiff < 0.015 || facingDiff - Math.PI) <0.015 ){  //used this
       if (bestPointDiff <= 6.0 &&  (facingDiff < 0.015 || facingDiff - Math.PI) <0.015 ){
         
+        // grad_y_i = signNoP(grad_y_i) * Math.abs(grad_x_i);
         grad_y_i = signNoP(grad_y_i) * (Math.abs(grad_x_i)/1.2);   //used this
+        // grad_y_i = signNoP(grad_y_i) * (  Math.abs(grad_x_i)/1.4  ); 
+
         grad_y_j = -grad_y_i;
       }
     
       const stiff = C_LONG_RANGE_STIFF * Math.exp(-tao * tao / C_TAO0);    //changed
       s = stiff * tao_sq / (0.5 * (grad_y_i * grad_y_i + grad_x_i * grad_x_i) + 0.5 * (grad_y_j * grad_y_j + grad_x_j * grad_x_j));     //changed
+      // console.log()
 
       delta_correction_i = clamp2D(s * 0.5 * grad_x_i,
           s * 0.5 * grad_y_i,
@@ -432,21 +590,65 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
       let rightSideDirectionVector = new THREE.Vector3(rightSideDirectionVector_temp.x, 0, rightSideDirectionVector_temp.z);
       rightSideDirectionVector = rightSideDirectionVector.clone().normalize();
 
+      /*
+      let check_angle2 = angleBetweenVectors_2(NormalVectorToCapsuleBodyNormalized, rightSideDirectionVector);
+      if(check_angle2 > 50)
+      {
+        console.log("check_angle2: ", check_angle2);
+      }
+      */
+
       let projectedPointOnRightSide =  findNewPositionByProjection(predicted_position, currentPosition, rightSideDirectionVector);
+
+
+      /*
+      var currentPosition_right  = new THREE.Vector3(capsule_entity.x, 0, capsule_entity.z);
+      var predicted_position_right  = new THREE.Vector3(projectedPointOnRightSide.x, 0, projectedPointOnRightSide.z);
+      var directionVector_right = predicted_position_right .clone().sub(currentPosition_right);    
+      var directionVectorNormalized = directionVector_right.clone().normalize();
+      let test_angle_right = angleBetweenVectors_2(directionVectorNormalized, NormalVectorToCapsuleBody);
+      if(test_angle_right > 20)
+      {
+        // console.log("test_angle_right: ", test_angle_right);
+      }
+    */
+
 
       //calculating projected point on left side
       let angleOfDirectionAndCapsuleBodyNormal_Radians_Left= -angleThresholdBtwnDirectionAndNormalInDeg * (Math.PI/180);
+      // let angleOfDirectionAndCapsuleBodyNormal_Radians_Left= 179.85 * (Math.PI/180);
       let leftSideDirectionVector_temp = deviateVectorByAngle(NormalVectorToCapsuleBodyNormalized, angleOfDirectionAndCapsuleBodyNormal_Radians_Left);
       let leftSideDirectionVector = new THREE.Vector3(leftSideDirectionVector_temp.x, 0, leftSideDirectionVector_temp.z);
       leftSideDirectionVector = leftSideDirectionVector.clone().normalize();
 
+      // let check_angle = angleBetweenVectors_2(NormalVectorToCapsuleBodyNormalized, leftSideDirectionVector);
+      // if(check_angle > 50)
+      // {
+      //   console.log("check_angle: ", check_angle);
+      // }
+      
       let projectedPointOnLeftSide = findNewPositionByProjection(predicted_position, currentPosition, leftSideDirectionVector);
+
+      /*
+      var currentPosition_left  = new THREE.Vector3(capsule_entity.x, 0, capsule_entity.z);
+      var predicted_position_left  = new THREE.Vector3(projectedPointOnLeftSide.x, 0, projectedPointOnLeftSide.z);
+      var directionVector_left = predicted_position_left .clone().sub(currentPosition_left);    
+      var directionVectorNormalized = directionVector_left.clone().normalize();
+      let test_angle_left = angleBetweenVectors_2(directionVectorNormalized, NormalVectorToCapsuleBody);
+      if(test_angle_left > 20)
+      {
+        // console.log("test_angle_left: ", test_angle_left);
+      }
+      */
+      
+
 
       // calculating distance btwn new predicted positions with old predicted position in left and right side of the capsule normal vector
       let distPredictedAndProjectedRightSide = distance(predicted_position.x, predicted_position.z, projectedPointOnRightSide.x, projectedPointOnRightSide.z);
       let distPredictedAndProjectedLeftSide = distance(predicted_position.x, predicted_position.z, projectedPointOnLeftSide.x, projectedPointOnLeftSide.z);
       
       //update agent position with whichever projected point has the shortest distance with old predicted position
+      // if(distPredictedAndProjectedLeftSide >= distPredictedAndProjectedRightSide && test_angle_right < 2)
       if(distPredictedAndProjectedLeftSide >= distPredictedAndProjectedRightSide )
       {
         capsule_entity.px = projectedPointOnRightSide.x;
@@ -457,6 +659,25 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
         capsule_entity.pz = projectedPointOnLeftSide.z;
       }
     }
+
+    /*
+      //checking corrected angle
+      // let current_rotation2 = capsule_entity.agent.rotation.z;
+      let current_rotation2 = current_rotation;
+      let NormalVectorToCapsuleBody2 = getCapsuleBodyNormal(capsule_entity, agentLength, RADIUS, current_rotation2);
+      let NormalVectorToCapsuleBodyNormalized2 = NormalVectorToCapsuleBody2.clone().normalize();
+  
+      var currentPosition = new THREE.Vector3(capsule_entity.x, 0, capsule_entity.z);
+      var predicted_position = new THREE.Vector3(capsule_entity.px, 0, capsule_entity.pz);
+      var directionVector = predicted_position.clone().sub(currentPosition);    
+      var directionVectorNormalized2 = directionVector.clone().normalize();
+    
+      let angleOfDirectionAndCapsuleBodyNormal_2 = angleBetweenVectors_2(directionVectorNormalized2, NormalVectorToCapsuleBody2);
+      if(angleOfDirectionAndCapsuleBodyNormal_2 > 2)
+      {
+        // console.log("index: ", capsule_entity.index, ", angle after: ", angleOfDirectionAndCapsuleBodyNormal_2);
+      }
+      */
   
     return { x: capsule_entity.px, y: 0, z: capsule_entity.pz };
   }
@@ -715,6 +936,71 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
     }
 
 
+
+/*
+    // wall collision (based on short range) - previous
+    i=0;
+    while(i<sceneEntities.length)
+    {
+      j=0;
+      while(j<customParams.wallData.length)
+      {
+        let [p_bestA, w_bestB, p_agent_i,p_agent_j] = getBestPointWithWall(sceneEntities[i].px, sceneEntities[i].pz, customParams.wallData[j]);
+
+        let dist_wall_to_agent = distance(p_bestA.x, p_bestA.z, w_bestB.x, w_bestB.z);
+        // let dist_cur_to_path_middle = distance(sceneEntities[i].goal_x, sceneEntities[i].goal_z, sceneEntities[i].px, sceneEntities[i].pz);
+
+        // let dist_cur_to_path_middle = distance(-4, 4, sceneEntities[i].px, sceneEntities[i].pz);
+        let dist_cur_to_path_middle = distance(sceneEntities[i].goal_x, sceneEntities[i].goal_z, sceneEntities[i].px, sceneEntities[i].pz);
+
+        // let angle = calculateAngle(-4, 4, -4, -140, sceneEntities[i].vx, sceneEntities[i].vz);
+        // let angle = calculateAngle(sceneEntities[i].vx, sceneEntities[i].vz, -4, -140, -4, 4);
+        let angle = calculateAngle( -4, -140, -4, 4, sceneEntities[i].vx, sceneEntities[i].vz);
+
+        // Calculate position vector connecting the two points
+        let positionVector = { x: -4 - (-4), y: 4 - (-140) }
+        // let positionVector = { x: -4 - (sceneEntities[i].goal_x), y: 4 - (-40) }
+        let velocityVector = { x: sceneEntities[i].vx, y: sceneEntities[i].vz }; // Velocity vector of the agent
+
+        // Calculate the angle between the position vector and the velocity vector
+        let angle_2 = angleBetweenVectors_2(positionVector, velocityVector);
+
+        let x_dist_diff = Math.abs(-4 - sceneEntities[i].px);
+        let x_dist_diff_with_goal = Math.abs(sceneEntities[i].px - sceneEntities[i].goal_x);
+
+        // if(dist_cur_to_path_middle < 13 && 180-angle_2 > 0.1)
+        if(dist_cur_to_path_middle < 13 )
+        {
+          const angleRad = 0.5 * (Math.PI/180);
+          // console.log("angleRad: ", angleRad);
+
+          // sceneEntities[i].goal_x =  sceneEntities[i].goal_x - 2 * sceneEntities[i].goal_x * Math.cos(angleRad);
+          // sceneEntities[i].goal_z =  sceneEntities[i].goal_z - 2 * sceneEntities[i].goal_z * Math.sin(angleRad);
+
+          // sceneEntities[i].goal_x =  sceneEntities[i].goal_x - 4 * Math.cos(angleRad);
+          sceneEntities[i].goal_z =  sceneEntities[i].goal_z - 4 * Math.sin(angleRad);
+        }
+
+        let penetration_normal = p_bestA.clone().sub(w_bestB);
+        const len = penetration_normal.length();
+        penetration_normal.divideScalar(len); // normalize
+        const penetration_depth = sceneEntities[i].radius + Math.sqrt(2) * sceneEntities[i].radius - len;
+        const intersects = penetration_depth > 0;
+        if (intersects) {
+          sceneEntities[i].colliding = true;
+
+          sceneEntities[i].px += penetration_normal.x * 1 * penetration_depth;
+          sceneEntities[i].pz += penetration_normal.z * 1 * penetration_depth;
+
+        }
+
+        j+=1;
+      }
+      i+=1
+    }
+*/
+
+
 if(customParams.scenario === 'bottleneck')
 {
 
@@ -729,6 +1015,9 @@ if(customParams.scenario === 'bottleneck')
         let dist_cur_to_path_middle = distance(sceneEntities[i].goal_x, sceneEntities[i].goal_z, sceneEntities[i].px, sceneEntities[i].pz);
 
         if(dist_cur_to_path_middle < 6.5  )
+        // if(dist_cur_to_path_middle < 6  )
+        // if(dist_cur_to_path_middle < 5  )
+        // if(dist_cur_to_path_middle < 4  )
         {
           sceneEntities[i].goal_x = sceneEntities[i].x;
           sceneEntities[i].goal_z = -140;
@@ -738,10 +1027,14 @@ if(customParams.scenario === 'bottleneck')
         const len = penetration_normal.length();
         penetration_normal.divideScalar(len); // normalize
         const penetration_depth = sceneEntities[i].radius + Math.sqrt(2) * sceneEntities[i].radius - len;
+        // console.log("intersects: ", intersects);
         const intersects = penetration_depth > 0;
         if (intersects) {
           sceneEntities[i].colliding = true;
-           sceneEntities[i].px += penetration_normal.x * .1 * penetration_depth;  
+          // sceneEntities[i].px += penetration_normal.x * 1 * penetration_depth;  //originally was that
+          // sceneEntities[i].pz += penetration_normal.z * 1 * penetration_depth;
+
+           sceneEntities[i].px += penetration_normal.x * .1 * penetration_depth;  //We can play with that  too for wall scenario.
           sceneEntities[i].pz += penetration_normal.z * .1 * penetration_depth;
         }
 
@@ -762,6 +1055,7 @@ if(customParams.scenario === 'bottleneck')
       while (j < sceneEntities.length) {
         let [bestA, bestB, agent_i, agent_j] = getBestPoint(sceneEntities[i].x, sceneEntities[i].z, sceneEntities[j].x, sceneEntities[j].z);
         let [p_bestA, p_bestB, p_agent_i,p_agent_j] = getBestPoint(sceneEntities[i].px, sceneEntities[i].pz, sceneEntities[j].px, sceneEntities[j].pz);
+        // // ttc in long range collision paper
 
         let [delta_correction_i, delta_correction_j, grad_i, grad_j, s] = longRangeConstraintCapsule(
             bestA, bestB,
@@ -821,18 +1115,34 @@ if(customParams.scenario === 'bottleneck')
     //Rotation constraint
     i = 0;
     while (i < sceneEntities.length) {
+      // console.log("customParams.tempcount: ", customParams.tempcount);
     
-      if(customParams.tempcount > 2) //allowing to adjust capsule's facing direction to the goal direction at the beginning.
+      if(customParams.tempcount > 2)
       {
         let corrected_position = rotationConstraint(sceneEntities[i]);
       
         sceneEntities[i].px = corrected_position.x;
         sceneEntities[i].pz = corrected_position.z;
       }
+
+
+      //checking corrected angle
+      // let current_rotation2 = sceneEntities[i].agent.rotation.z;
+      // let NormalVectorToCapsuleBody2 = getCapsuleBodyNormal(sceneEntities[i], agentLength, RADIUS, current_rotation2);
+      // let NormalVectorToCapsuleBodyNormalized2 = NormalVectorToCapsuleBody2.clone().normalize();
+  
+      // var currentPosition = new THREE.Vector3(sceneEntities[i].x, 0, sceneEntities[i].z);
+      // var predicted_position = new THREE.Vector3(sceneEntities[i].px, 0, sceneEntities[i].pz);
+      // var directionVector = predicted_position.clone().sub(currentPosition);    
+      // var directionVectorNormalized2 = directionVector.clone().normalize();
+    
+      // let angleOfDirectionAndCapsuleBodyNormal_2 = angleBetweenVectors_2(directionVectorNormalized2, NormalVectorToCapsuleBody2);
+      // console.log("index: ", sceneEntities[i].index, ", angle after: ", angleOfDirectionAndCapsuleBodyNormal_2);
      
       i += 1;
     }
 
+    // console.log(" \n ");
 
 
 
@@ -842,6 +1152,9 @@ if(customParams.scenario === 'bottleneck')
 
   sceneEntities.forEach(function (item) {
 
+    // const dx = item.goal_x - item.x;
+    // const dz = item.goal_z - item.z;
+
     const dx = item.px - item.x;
     const dz = item.pz - item.z;
 
@@ -850,6 +1163,8 @@ if(customParams.scenario === 'bottleneck')
     item.vx = (item.px - item.x) / timestep;
     item.vz = (item.pz - item.z) / timestep;
     item.vy = (item.py - item.y) / timestep;
+
+    console.log("index: ", item.index, ", item.vx: ", item.vx, ", item.vy: ", item.vy, ", item.vz: ", item.vz);
 
     item.x = item.px;
     item.z = item.pz;
