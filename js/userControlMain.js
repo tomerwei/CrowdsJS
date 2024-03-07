@@ -1542,8 +1542,8 @@ for (let i = 0; i < 9; i++) {
 //----------------------------------------------------------
 //uncomment any of the 5 scenarios below to test in different scenarios.
 
- hallway_facing_2_agents_scenario();
-  // hallway_facing_3_agents_scenario();
+//  hallway_facing_2_agents_scenario();
+  hallway_facing_3_agents_scenario();
   // hallway_facing_4_agents_scenario();
   // bottleneck_with_wall_scenario();     
   // hallway_facing_30_agents_scenario();

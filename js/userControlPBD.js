@@ -41,9 +41,16 @@ function deviateVectorByAngle(knownVector, angle) {
 }
 
 
-function findNewPositionByProjection(predict_point, cur_point, direction_vector) {
+function findNewPositionByProjection(predict_point, cur_point, direction_vector, angle_btwn_cur_direc_and_capsule_body_normal) {
+
+  let position_vector = {};
+  if(angle_btwn_cur_direc_and_capsule_body_normal < 90)
+  {
   // get position vector from current and precidted position
-  const position_vector = new THREE.Vector3().subVectors(predict_point, cur_point);
+   position_vector = new THREE.Vector3().subVectors(predict_point, cur_point);
+  }else{
+    position_vector = new THREE.Vector3().subVectors(cur_point, predict_point);
+  }
 
   // Project position_vector onto w_r
   const proj = position_vector.clone().projectOnVector(direction_vector); 
@@ -69,7 +76,8 @@ export function step(RADIUS, sceneEntities, world, scene, customParams = {}) {
   const C_LONG_RANGE_STIFF = 0.25;  
   const MAX_DELTA = 0.03;
 
-  let angleThresholdBtwnDirectionAndNormalInDeg = 0.06;  
+  // let angleThresholdBtwnDirectionAndNormalInDeg = 0.06;  
+  let angleThresholdBtwnDirectionAndNormalInDeg = 0.30;  
 
   // collision functions
   function rotateLineSegment(x1, y1, x2, y2, r) {
@@ -432,7 +440,7 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
       let rightSideDirectionVector = new THREE.Vector3(rightSideDirectionVector_temp.x, 0, rightSideDirectionVector_temp.z);
       rightSideDirectionVector = rightSideDirectionVector.clone().normalize();
 
-      let projectedPointOnRightSide =  findNewPositionByProjection(predicted_position, currentPosition, rightSideDirectionVector);
+      let projectedPointOnRightSide =  findNewPositionByProjection(predicted_position, currentPosition, rightSideDirectionVector, angleOfDirectionAndCapsuleBodyNormal);
 
       //calculating projected point on left side
       let angleOfDirectionAndCapsuleBodyNormal_Radians_Left= -angleThresholdBtwnDirectionAndNormalInDeg * (Math.PI/180);
@@ -440,7 +448,7 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
       let leftSideDirectionVector = new THREE.Vector3(leftSideDirectionVector_temp.x, 0, leftSideDirectionVector_temp.z);
       leftSideDirectionVector = leftSideDirectionVector.clone().normalize();
 
-      let projectedPointOnLeftSide = findNewPositionByProjection(predicted_position, currentPosition, leftSideDirectionVector);
+      let projectedPointOnLeftSide = findNewPositionByProjection(predicted_position, currentPosition, leftSideDirectionVector, angleOfDirectionAndCapsuleBodyNormal);
 
       // calculating distance btwn new predicted positions with old predicted position in left and right side of the capsule normal vector
       let distPredictedAndProjectedRightSide = distance(predicted_position.x, predicted_position.z, projectedPointOnRightSide.x, projectedPointOnRightSide.z);
