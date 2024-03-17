@@ -366,22 +366,6 @@ function init() {
   ring.position.y += 0.01;
 
 
-  function sampleCirclePoints(radius, sampleCount, centerX, centerY) {
-    let points = [];
-    for (let i = 0; i < sampleCount; i++) {
-      // Angle in radians
-      let angle = 2 * Math.PI * i / sampleCount;
-
-      // Calculating x and y coordinates
-      let x = centerX + radius * Math.cos(angle);
-      let y = centerY + radius * Math.sin(angle);
-
-      points.push({ x: x, y: y });
-    }
-    return points;
-  }
-
-
   function sampleCirclePointsWithDistance(sampleCount, distanceBetweenPoints, centerX, centerY) {
     // Calculating the total circumference that would fit the points with the given distance
     let totalCircumference = distanceBetweenPoints * sampleCount;
@@ -566,7 +550,23 @@ function init() {
 
   }
 
-  function circleScenario(){
+function sampleCirclePoints(radius, sampleCount, centerX, centerY) {
+    let points = [];
+    for (let i = 0; i < sampleCount; i++) {
+      // Angle in radians
+      let angle = 2 * Math.PI * i / sampleCount;
+
+      // Calculating x and y coordinates
+      let x = centerX + radius * Math.cos(angle);
+      let y = centerY + radius * Math.sin(angle);
+
+      points.push({ x: x, y: y });
+    }
+    return points;
+  }
+
+
+function circleScenario(){
 
     let points = sampleCirclePoints(20, 20, 0, 0);
     // let points = sampleCirclePointsWithDistance(42, 2 * 2* RADIUS + 2, 0, 0);
@@ -581,8 +581,8 @@ function init() {
             z: point.y,
           },
           {
-            x: -point.x ,
-            z: -point.y,
+            x: -point.x * 1.1 ,
+            z: -point.y * 1.1 ,
           },
           0.8,
           "X"
@@ -618,6 +618,145 @@ function init() {
       }
     }
   }
+
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+
+
+function narrow_hallwayOneAgent_Scenario() {
+
+  addColumnAgentGroup(
+      agentData,
+      1,
+      RADIUS * 1.5,
+      {
+          x: -30,
+          z: -2.00,
+      },
+      {
+          x: 20,
+          z: -2.0,
+      },
+      0.8,
+      "X"
+  );
+
+  // experiment border
+  const boxGeometry1 = new THREE.BoxGeometry(31, 5, 1);
+  const boxMaterial1 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
+  const left = new THREE.Mesh(boxGeometry1, boxMaterial1);
+  // left.position.set(20, 2.5, 0);
+  // left.position.set(-10, 2.5, 0);
+  left.position.set(-10, 2.5, 0.5);
+
+  wallData.push({
+      center: new THREE.Vector3(-10, 2.5, 0.5),
+      depth: 1, // along z-axis
+      width: 31, // along x-axis
+      base: new THREE.Vector3(-10 - 31/2, 2.5, 0.5),
+      tip: new THREE.Vector3(-10 + 31/2, 2.5, 0.5),
+  });
+
+  const boxGeometry4 = new THREE.BoxGeometry(31, 5, 1);
+  const boxMaterial4 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
+  const right = new THREE.Mesh(boxGeometry4, boxMaterial4);
+  // right.position.set(-30, 2.5, 0);
+  // right.position.set(-10, 2.5, -4);
+  right.position.set(-10, 2.5, -4.5);
+  wallData.push({
+      center: new THREE.Vector3(-10, 2.5, -4.5),
+      depth: 1, // along z-axis
+      width: 31, // along x-axis
+      base: new THREE.Vector3(-10 - 31 / 2, 2.5, -4.5),
+      tip: new THREE.Vector3(-10 + 31 / 2, 2.5, -4.5),
+  });
+
+  scene.add(left);
+  scene.add(right);
+
+  parameters.wallData = wallData;
+}
+
+
+//********************************************************* *********************************************************
+
+function narrow_hallwayTwoAgent_FaceToFace_Scenario() {
+
+    addColumnAgentGroup(
+      agentData,
+      1,
+      RADIUS * 1.5,
+      {
+          x: 15,
+          // z: -2.50,
+          z: -3.5,
+      },
+      {
+          x: -25,
+          // z: -2.5,
+          z: -3.5,
+      },
+      0.8,
+      "X"
+  );
+
+  addColumnAgentGroup(
+    agentData,
+    1,
+    RADIUS * 1.5,
+    {
+        x: -30,
+        // z: -6.0,
+        z: -5.0,
+    },
+    {
+        x: 15,
+        // z: -6.0,
+        z: -5.0,
+    },
+    0.8,
+    "X"
+);
+
+    // experiment border
+    const boxGeometry1 = new THREE.BoxGeometry(31, 5, 1);
+    const boxMaterial1 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
+    const left = new THREE.Mesh(boxGeometry1, boxMaterial1);
+    // left.position.set(20, 2.5, 0);
+    left.position.set(-10, 2.5, 0);
+  
+    wallData.push({
+        center: new THREE.Vector3(-10, 2.5, 0),
+        depth: 1, // along z-axis
+        width: 31, // along x-axis
+        base: new THREE.Vector3(-10 - 31/2, 2.5, 0),
+        tip: new THREE.Vector3(-10 + 31/2, 2.5, 0),
+    });
+  
+    const boxGeometry4 = new THREE.BoxGeometry(31, 5, 1);
+    const boxMaterial4 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
+    const right = new THREE.Mesh(boxGeometry4, boxMaterial4);
+    // right.position.set(-30, 2.5, 0);
+    right.position.set(-10, 2.5, -9);
+    wallData.push({
+        center: new THREE.Vector3(-10, 2.5, -9),
+        depth: 1, // along z-axis
+        width: 31, // along x-axis
+        base: new THREE.Vector3(-10 - 31 / 2, 2.5, -9),
+        tip: new THREE.Vector3(-10 + 31 / 2, 2.5, -9),
+    });
+  
+    scene.add(left);
+    scene.add(right);
+  
+    parameters.wallData = wallData;
+
+
+  }
+
+
+
+// --------------------------------------------------------------------------------------------------------------------------------
 
   function tryingScenario_Bilas_1_4_agents_V2() {
 
@@ -1159,6 +1298,7 @@ addColumnAgentGroup(
 function bottleneck_with_wall_scenario() {
 parameters.scenario = 'bottleneck';
 
+
 //working latest - 3
 for (let i = 0; i < 9; i++) {
   for (let j = 0; j < 6; j++) {
@@ -1268,6 +1408,116 @@ for (let i = 0; i < 9; i++) {
     }
 
 
+    
+    function bottleneck_with_wall_scenario_x3() {
+      parameters.scenario = 'bottleneck';
+      
+      //working latest - 3
+      for (let i = 0; i < 15; i++) {
+        for (let j = 0; j < 9; j++) {
+      
+        let x_goal = 0.0;
+        
+        if(i < 2)
+        {
+           x_goal = -3.0;
+        }else if(i>1 && i< 4)
+        {
+           x_goal = -4.2;
+        }else if(i>3 && i< 5)
+        {
+           x_goal = -5.0;
+        }else if(i>4 && i< 7)
+        {
+          x_goal = -6.0;
+        }else{
+          x_goal = -6.0;
+        }
+      
+      
+            addColumnAgentGroup(
+                agentData,
+                1,
+                RADIUS * 1.5,
+                {
+                    x: 37 - i * 5.3,
+                    z: 72 - j * 5.3,
+                },
+                {
+                    // x: -4.3,
+                    x: x_goal,
+                    z: 4,
+                    // z: 6,
+                },
+                0.8,
+                "X"
+            );
+      
+        }
+      }
+      
+      
+              // experiment border
+              const boxGeometry1 = new THREE.BoxGeometry(31, 5, 1);
+              const boxMaterial1 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
+              const left = new THREE.Mesh(boxGeometry1, boxMaterial1);
+              left.position.set(20, 2.5, 0);
+      
+              wallData.push({
+                  center: new THREE.Vector3(20, 2.5, 0),
+                  depth: 1, // along z-axis
+                  width: 31, // along x-axis
+                  base: new THREE.Vector3(20 - 31/2, 2.5, 0),
+                  tip: new THREE.Vector3(20 + 31/2, 2.5, 0),
+              });
+      
+              const boxGeometry2 = new THREE.BoxGeometry(1, 5, 50);
+              const boxMaterial2 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
+              const bottom = new THREE.Mesh(boxGeometry2, boxMaterial2);
+              //bottom.position.set(-15, 2.5, 0);
+              bottom.position.set(-15, 2.5, -25);
+      
+              wallData.push({
+                  center: new THREE.Vector3(-15, 2.5, -25),
+                  depth: 50, // along z-axis
+                  width: 1, // along x-axis
+                  base: new THREE.Vector3(-15, 2.5, -25 - 50/2),
+                  tip: new THREE.Vector3(-15, 2.5, -25 + 50 / 2),
+              });
+      
+              const boxGeometry3 = new THREE.BoxGeometry(1, 5, 50);
+              const boxMaterial3 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
+              const top = new THREE.Mesh(boxGeometry3, boxMaterial3);
+              top.position.set(5, 2.5, -25);
+              wallData.push({
+                  center: new THREE.Vector3(5, 2.5, -25),
+                  depth: 50, // along z-axis
+                  width: 1, // along x-axis
+                  base: new THREE.Vector3(5, 2.5, -25 - 50/2),
+                  tip: new THREE.Vector3(5, 2.5, -25 + 50/2),
+              });
+      
+              const boxGeometry4 = new THREE.BoxGeometry(31, 5, 1);
+              const boxMaterial4 = new THREE.MeshBasicMaterial({ color: 0x000f26 });
+              const right = new THREE.Mesh(boxGeometry4, boxMaterial4);
+              right.position.set(-30, 2.5, 0);
+              wallData.push({
+                  center: new THREE.Vector3(-30, 2.5, 0),
+                  depth: 1, // along z-axis
+                  width: 31, // along x-axis
+                  base: new THREE.Vector3(-30 - 31 / 2, 2.5, 0),
+                  tip: new THREE.Vector3(-30 + 31 / 2, 2.5, 0),
+              });
+      
+              scene.add(left);
+              scene.add(bottom);
+              scene.add(top);
+              scene.add(right);
+      
+              parameters.wallData = wallData;
+      
+          }
+
 
   //********************************************************* Trying scenario 1 *********************************************************
   // Time: 0.06 seconds of the video
@@ -1314,6 +1564,111 @@ for (let i = 0; i < 9; i++) {
       }
     }
   }
+
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+function suddenStop_Scenario() {
+
+    addColumnAgentGroup(
+      agentData,
+      1,
+      RADIUS * 1.0,
+      {
+        x: 28,
+        z: 0,
+      },
+      {
+        x: -28,
+        z: 1.5,
+      },
+      0.8,
+      "X"
+  );
+
+  addColumnAgentGroup(
+    agentData,
+    1,
+    RADIUS * 1.5,
+    {
+      x: 20,
+      z: 0,
+    },
+    {
+      x: 10,
+      z: 0,
+    },
+    0.8,
+    "X"
+  );
+
+}  
+
+
+function rectangle_Scenario() {
+ 
+
+  addColumnAgentGroup(
+    agentData,
+    1,
+    RADIUS * 1.0,
+    {
+      x: 14,
+      z: 14,
+    },
+    {
+      x: -13,
+      z: -14.0,
+    },
+    0.8,
+    "X");
+
+  addColumnAgentGroup(
+  agentData,
+  1,
+  RADIUS * 1.5,
+  {
+    x: -14,
+    z: -14,
+  },
+  {
+    x: 14,
+    z: 15,
+  },
+  0.8,
+  "X");
+
+  addColumnAgentGroup(
+    agentData,
+    1,
+    RADIUS * 1.0,
+    {
+      x: 14,
+      z: -14,
+    },
+    {
+      x: -13,
+      z: 14,
+    },
+    0.8,
+    "X");
+
+  addColumnAgentGroup(
+    agentData,
+    1,
+    RADIUS * 1.0,
+    {
+      x: -14,
+      z: 14,
+    },
+    {
+      x: 15,
+      z: -14.0,
+    },
+    0.8,
+    "X"); 
+
+}
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 
     function tryingScenario_4_Bilas_Capsule() {
@@ -1542,12 +1897,23 @@ for (let i = 0; i < 9; i++) {
 //----------------------------------------------------------
 //uncomment any of the 5 scenarios below to test in different scenarios.
 
-//  hallway_facing_2_agents_scenario();
-  hallway_facing_3_agents_scenario();
+  // hallway_facing_2_agents_scenario();
+  // hallway_facing_3_agents_scenario();
   // hallway_facing_4_agents_scenario();
-  // bottleneck_with_wall_scenario();     
+
+  // bottleneck_with_wall_scenario();   
+  // bottleneck_with_wall_scenario_x3();
+
   // hallway_facing_30_agents_scenario();
 
+  // rectangle_Scenario();
+  suddenStop_Scenario();
+  // circleScenario(); 
+
+  // narrow_hallwayOneAgent_Scenario();
+  // narrow_hallwayTwoAgent_FaceToFace_Scenario();
+
+  // tryingScenario_Bilas_1_oneway();
 //----------------------------------------------------------
 
 
@@ -1670,7 +2036,7 @@ for (let i = 0; i < 9; i++) {
     spotLightTarget = new THREE.Object3D();
     scene.add(spotLightTarget);
     spotLight.target = spotLightTarget;
-    scene.add(spotLight);
+    // scene.add(spotLight);                  // turn off the light here.
     spotLights[item.index] = spotLight;
     // ----------------
     item.agent = agent;
@@ -1810,6 +2176,7 @@ function animate() {
     // const dx = member.px - member.x;
     // const dz = member.pz - member.z;
     // member.agent.rotation.z = Math.atan2(dz, dx);
+
 
 /*
 //=============================== draw lines from trajectories - start ==========================================

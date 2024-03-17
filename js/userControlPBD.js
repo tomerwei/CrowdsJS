@@ -44,6 +44,9 @@ function deviateVectorByAngle(knownVector, angle) {
 function findNewPositionByProjection(predict_point, cur_point, direction_vector, angle_btwn_cur_direc_and_capsule_body_normal) {
 
   let position_vector = {};
+
+  // position_vector = new THREE.Vector3().subVectors(predict_point, cur_point);
+
   if(angle_btwn_cur_direc_and_capsule_body_normal < 90)
   {
   // get position vector from current and precidted position
@@ -76,8 +79,7 @@ export function step(RADIUS, sceneEntities, world, scene, customParams = {}) {
   const C_LONG_RANGE_STIFF = 0.25;  
   const MAX_DELTA = 0.03;
 
-  // let angleThresholdBtwnDirectionAndNormalInDeg = 0.06;  
-  let angleThresholdBtwnDirectionAndNormalInDeg = 0.30;  
+  let angleThresholdBtwnDirectionAndNormalInDeg = 0.2;  
 
   // collision functions
   function rotateLineSegment(x1, y1, x2, y2, r) {
@@ -256,7 +258,8 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
 
   function collisionConstraint_Capsule(best_i, best_j, p_best_i, p_best_j) {
     // let stif = 0.60;
-    let stif = 0.85;
+    // let stif = 0.85;
+    let stif = 1.0;
 
     const agentCentroidDist = distance(p_best_i.x, p_best_i.z, p_best_j.x, p_best_j.z);
 
@@ -725,7 +728,7 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
 
 if(customParams.scenario === 'bottleneck')
 {
-
+   
     // wall collision (based on short range) - 03-01-2024, working.
     i=0;
     while(i<sceneEntities.length)
@@ -736,7 +739,8 @@ if(customParams.scenario === 'bottleneck')
         let [p_bestA, w_bestB, p_agent_i,p_agent_j] = getBestPointWithWall(sceneEntities[i].px, sceneEntities[i].pz, customParams.wallData[j]);
         let dist_cur_to_path_middle = distance(sceneEntities[i].goal_x, sceneEntities[i].goal_z, sceneEntities[i].px, sceneEntities[i].pz);
 
-        if(dist_cur_to_path_middle < 6.5  )
+        // if(dist_cur_to_path_middle < 6.5  )
+        if(dist_cur_to_path_middle < 5.5  )
         {
           sceneEntities[i].goal_x = sceneEntities[i].x;
           sceneEntities[i].goal_z = -140;
@@ -760,6 +764,7 @@ if(customParams.scenario === 'bottleneck')
   }
 
 
+  
   if(customParams.scenario != 'bottleneck')
   {
 //=========================================== our Long-range call started ======================================================================
@@ -780,6 +785,8 @@ if(customParams.scenario === 'bottleneck')
             i, j
         );
 
+        let long_stif = 1;
+
         sceneEntities[i].px += delta_correction_i.x;
         sceneEntities[i].pz += delta_correction_i.y;
         sceneEntities[j].px += delta_correction_j.x;
@@ -794,10 +801,10 @@ if(customParams.scenario === 'bottleneck')
         sceneEntities[i].grad.s = s;
         sceneEntities[j].grad.s = s;
 
-        sceneEntities[i].grad.dx += delta_correction_i.x;
-        sceneEntities[i].grad.dz += delta_correction_i.y;
-        sceneEntities[j].grad.dx += delta_correction_j.x;
-        sceneEntities[j].grad.dz += delta_correction_j.y;
+        sceneEntities[i].grad.dx += long_stif * delta_correction_i.x;
+        sceneEntities[i].grad.dz += long_stif * delta_correction_i.y;
+        sceneEntities[j].grad.dx += long_stif * delta_correction_j.x;
+        sceneEntities[j].grad.dz += long_stif * delta_correction_j.y;
 
         customParams.best[i][j] = [bestA, bestB]
         customParams.best[j][i] = [bestB, bestA]
@@ -862,6 +869,19 @@ if(customParams.scenario === 'bottleneck')
     item.x = item.px;
     item.z = item.pz;
     item.y = item.py;
+
+    // For sudden stop scenario
+    if(distance(item.x, item.z, item.goal_x, item.goal_z) < 0.1)
+    {
+      item.vx = 0;
+      item.vy = 0;
+      item.vz = 0;
+
+      item.x = item.goal_x;
+      item.z = item.goal_z;
+      item.y = 0;
+    }
+
   });
 
 }
