@@ -68,6 +68,18 @@ function findNewPositionByProjection(predict_point, cur_point, direction_vector,
 
 let closest_in_left = new THREE.Vector3();
 let closest_in_right = new THREE.Vector3();
+
+let closest_wall_in_left = new THREE.Vector3();
+let closest_wall_in_right = new THREE.Vector3();
+
+// let closest_agent_in_left = new THREE.Vector3();
+// let closest_agent_in_right = new THREE.Vector3();
+
+let best_in_left_agent = new THREE.Vector3();
+let best_in_right_agent = new THREE.Vector3();
+let best_in_left_wall = new THREE.Vector3();
+let best_in_right_wall = new THREE.Vector3();
+
 let new_point = new THREE.Vector3();
 let normalized_velocity = {};
 
@@ -87,7 +99,6 @@ export function step(RADIUS, sceneEntities, world, scene, customParams = {}) {
   let angleThresholdBtwnDirectionAndNormalInDeg = 0.08; 
 
   let dist_tip_to_base  = 0;
-  let distToActivateOrientationConstraint = 0;
 
   // collision functions
   function rotateLineSegment(x1, y1, x2, y2, r) {
@@ -703,7 +714,9 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
   function find_best_point_On_right_or_Left_of_Velocity(capsule_entity, capsule_or_wall_entity, agents_pair_type)
   {
       let bestA_agent = new THREE.Vector3();
-      let bestB_other_agent_or_wall = new THREE.Vector3();
+      let bestB_agent = new THREE.Vector3();
+      let bestA2 = new THREE.Vector3();
+      let bestB_agent_or_wall = new THREE.Vector3();
 
       let cur_pos = new THREE.Vector3(capsule_entity.x, 0, capsule_entity.z);
       normalized_velocity = new THREE.Vector3(sceneEntities[i].vx, 0, sceneEntities[i].vz).normalize();
@@ -713,24 +726,83 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
       const displacement = normalized_velocity.clone().multiplyScalar(threshold_Dist);
       new_point = cur_pos.clone().add(displacement);
       
-      if( agents_pair_type == "agents_only" )
+      if( agents_pair_type == "agents_only" || agents_pair_type == "dense_torso_like" )
       {
-        [bestA_agent, bestB_other_agent_or_wall, , ] = getBestPoint(capsule_entity.x, capsule_entity.z, capsule_or_wall_entity.x, capsule_or_wall_entity.z);  // getting best points in other agents.
+        [bestA_agent, bestB_agent_or_wall, , ] = getBestPoint(new_point.x, new_point.z, capsule_or_wall_entity.x, capsule_or_wall_entity.z);
       }
       else if(agents_pair_type == "agents_and_walls")
       {
-        [bestA_agent, bestB_other_agent_or_wall, , ] = getBestPointWithWall(capsule_entity.x, capsule_entity.z, capsule_or_wall_entity);     // getting best points in the walls.
+        [bestA_agent, bestB_agent_or_wall, , ] = getBestPointWithWall(new_point.x, new_point.z, capsule_or_wall_entity);
       }
-   
-  return [bestA_agent, bestB_other_agent_or_wall]
+
+/*       
+      let point_on_obs = new THREE.Vector3(bestB_agent_or_wall.x, 0, bestB_agent_or_wall.z);
+      
+      // Create vector from capsule position to the point
+      const vectorToPoint = new THREE.Vector3().subVectors(point_on_obs, cur_pos);    
+  
+      // Rotate the velocity vector by 90 degrees in the 2D plane to get the perpendicular vector
+      const perpendicularVector = new THREE.Vector3(-normalized_velocity.z, 0, normalized_velocity.x);
+  
+      // Compute the dot product
+      const dotProduct = perpendicularVector.dot(vectorToPoint);
+  
+      // Determine if the point is to the left or right of the velocity vector.
+      const direction = dotProduct > 0 ? 'right' : 'left';
+  
+      if(direction == 'right')
+      {
+        // closest_in_right = bestB_agent_or_wall;    // point is on the right side
+        best_in_right_wall = bestB_agent_or_wall;
+      }
+  
+      if(direction == 'left')             
+      {
+        // closest_in_left = bestB_agent_or_wall;       // point is on the left side
+        best_in_left_wall = bestB_agent_or_wall;
+      }
+*/
+  
+  // return [best_in_right_wall, best_in_left_wall]
+  return [bestB_agent_or_wall]  
 }
+
+
+  //in case of multiple best colliding points, we select the one with the closest and along the velocity direction
+  function findClosestInLeftAndRightOfVelocity(new_point, best_in_left_wall, best_in_left_agent, best_in_right_wall, best_in_right_agent)
+  {
+      let cur_to_left_wall_dist = distance(new_point.x, new_point.z, best_in_left_wall.x, best_in_left_wall.z);
+      let cur_to_left_agent_dist = distance(new_point.x, new_point.z, best_in_left_agent.x, best_in_left_agent.z);
+  
+      let cur_to_right_wall_dist = distance(new_point.x, new_point.z, best_in_right_wall.x, best_in_right_wall.z);
+      let cur_to_right_agent_dist = distance(new_point.x, new_point.z, best_in_right_agent.x, best_in_right_agent.z);
+  
+      if(cur_to_left_wall_dist >= cur_to_left_agent_dist)
+      {
+          closest_in_left = best_in_left_agent;
+      }else{
+          {
+            closest_in_left = best_in_left_wall;
+          }
+      }
+  
+      if(cur_to_right_wall_dist >= cur_to_right_agent_dist)
+      {
+          closest_in_right = best_in_right_agent;
+        }else{
+          {
+            closest_in_right = best_in_right_wall;
+          }
+      }
+  
+  return [closest_in_right, closest_in_left]
+  }
   
   
-  // function compute_Shortest_Perpendicular_dist(closest_in_left_or_right, new_point, normalized_velocity_2)
-  function compute_Shortest_Perpendicular_dist(closest_in_left_or_right, current_position, normalized_velocity_2)
+  function compute_Shortest_Perpendicular_dist(closest_in_left_or_right, new_point, normalized_velocity_2)
   {
         // Calculate the vector from the line origin to the point in question
-        const originToPoint = new THREE.Vector3().subVectors(closest_in_left_or_right, current_position);
+        const originToPoint = new THREE.Vector3().subVectors(closest_in_left_or_right, new_point);
   
         // Project this vector onto the direction vector of the line
         const projection = normalized_velocity_2.clone().multiplyScalar(originToPoint.dot(normalized_velocity_2));
@@ -745,8 +817,7 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
   }
 
 
-  // function computerClearanceForAgent(capsule_entity, normalized_velocity_2, closest_in_right, closest_in_left)
-  function computerClearanceForAgent(capsule_entity, normalized_velocity_2, closest_in_right, closest_in_left,scenario_type)
+  function computerClearanceForAgent(normalized_velocity_2, closest_in_right, closest_in_left)
   {
       let perpendicularDistance_right = 0;
       let perpendicularDistance_left = 0;
@@ -754,28 +825,49 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
   
       let closest_in_right_2 = new THREE.Vector3(closest_in_right.x, 0, closest_in_right.z);
       let closest_in_left_2 = new THREE.Vector3(closest_in_left.x, 0, closest_in_left.z);
-
-      let current_position = new THREE.Vector3(capsule_entity.x, 0, capsule_entity.z);    
   
       if(closest_in_right_2.length() != 0)
       {
-        perpendicularDistance_right = compute_Shortest_Perpendicular_dist(closest_in_right_2, current_position, normalized_velocity_2);
-      
+        perpendicularDistance_right = compute_Shortest_Perpendicular_dist(closest_in_right_2, new_point, normalized_velocity_2);
       }
   
       if(closest_in_left_2.length() != 0)
       {
-        perpendicularDistance_left = compute_Shortest_Perpendicular_dist(closest_in_left_2, current_position, normalized_velocity_2);
+        perpendicularDistance_left = compute_Shortest_Perpendicular_dist(closest_in_left_2, new_point, normalized_velocity_2);
       }
 
-      if(scenario_type == "has_walls")
+      if(customParams.scenario === 'narrow_hallwayOneAgent_Scenario' || customParams.scenario === 'narrow_hallwayTwoAgent_FaceToFace' )
       {
         let wall_depth = customParams.wallData[1].depth;
-        clearance = perpendicularDistance_right + perpendicularDistance_left - 1 * wall_depth;
-      }else{
-        clearance = perpendicularDistance_right + perpendicularDistance_left - 2 * capsule_entity.radius; 
+        // clearance = perpendicularDistance_right + perpendicularDistance_left - 2 * wall_depth;
+        clearance = perpendicularDistance_right + perpendicularDistance_left;
       }
-      
+
+      if(customParams.scenario === 'dense_torso_like' )
+      {
+          clearance = perpendicularDistance_right + perpendicularDistance_left - 2 * RADIUS;
+      }
+
+      // if(sceneEntities[i].index == 0 )
+      // {
+      //   console.log("id 0, " , "right: ", perpendicularDistance_right, ", left: ", perpendicularDistance_left, ", clearance: ", clearance);
+      // }
+
+      // if(sceneEntities[i].index == 1 )
+      // {
+      //   console.log("id 1, " , "right: ", perpendicularDistance_right, ", left: ", perpendicularDistance_left, ", clearance: ", clearance);
+      // }
+
+      // if(sceneEntities[i].index == 2 )
+      // {
+      //   console.log("id 2, " , "right: ", perpendicularDistance_right, ", left: ", perpendicularDistance_left, ", clearance: ", clearance);
+      // }
+
+      // if(sceneEntities[i].index == 3 )
+      // {
+      //   console.log("id 3, " , "right: ", perpendicularDistance_right, ", left: ", perpendicularDistance_left, ", clearance: ", clearance);
+      // }
+  
   return clearance;
   }
 
@@ -783,188 +875,82 @@ function getCapsuleBodyNormal(agent, agentLength, RADIUS, current_rotation) {
   function orientationConstraint(capsule, clearance, distToActivateOrientationConstraint)
   {    
     let cross_width = (dist_tip_to_base/2) + RADIUS;
-
-      if( (clearance) >= (2 * cross_width) && (distToActivateOrientationConstraint < (cross_width + 2)) )
+    if(customParams.scenario === 'narrow_hallwayOneAgent_Scenario' || customParams.scenario === 'narrow_hallwayTwoAgent_FaceToFace' )
+    {
+      if( (clearance - capsule.radius) >= (2 * cross_width) && (distToActivateOrientationConstraint < (cross_width + 1)) )
+      // if( (clearance - capsule.radius) >= (2 * cross_width) )
       {
-      }else if( ((clearance) < (2 * cross_width )) && ( clearance - capsule.radius > 0) && (distToActivateOrientationConstraint < (cross_width + 2)) ){
+        // console.log("if");
+        // customParams.orientation=  'side_step';
+      }else if( ((clearance - capsule.radius) < (2 * cross_width )) && ( clearance - capsule.radius > 0) && (distToActivateOrientationConstraint < (cross_width + 1)) ){
+      // }else if( ((clearance - capsule.radius) < (2 * cross_width )) && ( clearance - capsule.radius > 0) ){
+        // console.log("else");
         let cosValue = ( (clearance - capsule.radius) / ( 2 * cross_width ));
         const angleInRadians = Math.acos(cosValue);
   
         //smooth the rotation while changing orientation
         if( Math.abs(capsule.agent.rotation.z - angleInRadians) >= 0.08)
         {
-          capsule.agent.rotation.z = capsule.agent.rotation.z + angleInRadians/100;
+          capsule.agent.rotation.z = capsule.agent.rotation.z + angleInRadians/150;
         } 
+        // customParams.orientation=  'side_step';   // commented
       }
       else if( (distToActivateOrientationConstraint < (cross_width + 2) ) && clearance - capsule.radius <= 0)
       {
       }
       else{
+          // customParams.orientation=  'front';   // commented
         }
-  }
-
-
-    function findClosestLeftOrRightPointOfVel(capsule_entity, point_on_obs)
-    {
-        let cur_position = new THREE.Vector3(capsule_entity.x, 0, capsule_entity.z);
-        let vel_direction = new THREE.Vector3(capsule_entity.vx, 0, capsule_entity.vz).normalize();
-        
-        // Create vector from capsule position to the point
-        const vectorToPoint = new THREE.Vector3().subVectors(point_on_obs, cur_position);    
-    
-        // Rotate the velocity vector by 90 degrees in the 2D plane to get the perpendicular vector
-        const perpendicularVector = new THREE.Vector3(-vel_direction.z, 0, vel_direction.x);
-    
-        // Compute the dot product
-        const dotProduct = perpendicularVector.dot(vectorToPoint);
-    
-        // Determine if the point is to the left or right of the velocity vector.
-        const direction = dotProduct > 0 ? 'right' : 'left';
-  
-        if(direction == 'right')
-        {
-          let best_in_right_agent = point_on_obs;
-  
-          let cur_to_best_agent_dist_right = distance(capsule_entity.x, capsule_entity.z, best_in_right_agent.x, best_in_right_agent.z);
-          if(cur_to_best_agent_dist_right < capsule_entity.prev_cur_to_best_agent_dist_right  )
-          {
-            capsule_entity.closest_agent_in_right = best_in_right_agent;
-          }
-          capsule_entity.prev_cur_to_best_agent_dist_right = cur_to_best_agent_dist_right;
-
-          return [capsule_entity.closest_agent_in_right, direction]
-        }
-        
-        if(direction == 'left')             
-        {
-          let best_in_left_agent = point_on_obs;
-  
-          let cur_to_best_agent_dist_left = distance(capsule_entity.x, capsule_entity.z, best_in_left_agent.x, best_in_left_agent.z);
-          if(cur_to_best_agent_dist_left < capsule_entity.prev_cur_to_best_agent_dist_left  )
-          {
-            capsule_entity.closest_agent_in_left = best_in_left_agent;
-          }
-          capsule_entity.prev_cur_to_best_agent_dist_left = cur_to_best_agent_dist_left;
-
-          return [capsule_entity.closest_agent_in_left, direction]
-        }    
-    
     }
 
 
-    function findClosestLeftOrRightWALLPointOfVel(capsule_entity, point_on_obs)
-    {
-        let cur_position = new THREE.Vector3(capsule_entity.x, 0, capsule_entity.z);
-        let vel_direction = new THREE.Vector3(capsule_entity.vx, 0, capsule_entity.vz).normalize();
+    if(customParams.scenario === 'dense_torso_like' )
+    {       
+      if(sceneEntities[i].index == 0)
+        {     // we make one agent moving and all other agents static.
+              
+          if( clearance - sceneEntities[i].radius >= 2 * cross_width )
+            {
+              // customParams.orientation=  'front';            
+            }else if( (clearance - sceneEntities[i].radius > 0) && ((clearance - sceneEntities[i].radius) < ( 2 * cross_width))   && (clearance > 2.1) && (distToActivateOrientationConstraint < (cross_width+3)) ){
+          
+              let cosValue = (clearance - sceneEntities[i].radius) / (1.0 * (cross_width)) ;
+              const angleInRadians = Math.acos(cosValue);          
         
-        // Create vector from capsule position to the point
-        const vectorToPoint = new THREE.Vector3().subVectors(point_on_obs, cur_position);    
-    
-        // Rotate the velocity vector by 90 degrees in the 2D plane to get the perpendicular vector
-        const perpendicularVector = new THREE.Vector3(-vel_direction.z, 0, vel_direction.x);
-    
-        // Compute the dot product
-        const dotProduct = perpendicularVector.dot(vectorToPoint);
-    
-        // Determine if the point is to the left or right of the velocity vector.
-        const direction = dotProduct > 0 ? 'right' : 'left';
-    
-  
-        if(direction == 'right')
-        {
-          let best_in_right_wall = point_on_obs;
-  
-          let cur_to_best_wall_dist_right = distance(capsule_entity.x, capsule_entity.z, best_in_right_wall.x, best_in_right_wall.z);
+              //smoothing the capsule rotation due to orientation changes
+              if( (sceneEntities[i].agent.rotation.z < angleInRadians ) && Math.abs(sceneEntities[i].agent.rotation.z - angleInRadians) >= 0.01)     // current orientation is bigger than before
+              {
+                  sceneEntities[i].agent.rotation.z = sceneEntities[i].agent.rotation.z + angleInRadians/50;
+              }else if ( (sceneEntities[i].agent.rotation.z >= angleInRadians ) && Math.abs(sceneEntities[i].agent.rotation.z - angleInRadians) >= 0.01 )
+                {    
+                  // current orientation is smaller than before
+                  sceneEntities[i].agent.rotation.z = sceneEntities[i].agent.rotation.z - angleInRadians/50;   //smoothing the orientation change
+              }
+                           
+              // customParams.orientation=  'side_step';  //commented
+            }else if( clearance <= 2){                   // the available clearance is very small and there is not enough space even capsule is rotated 90 degrres    
 
-          if(cur_to_best_wall_dist_right < capsule_entity.prev_cur_to_best_wall_dist_right  )
-          {
-            capsule_entity.closest_wall_in_right = best_in_right_wall;
-          }
-          capsule_entity.prev_cur_to_best_wall_dist_right = cur_to_best_wall_dist_right;
-
-          return [capsule_entity.closest_wall_in_right, direction]
-        }
-        
-    
-        if(direction == 'left')             
-        {
-          let best_in_left_wall = point_on_obs;
-  
-          let cur_to_best_wall_dist_left = distance(capsule_entity.x, capsule_entity.z, best_in_left_wall.x, best_in_left_wall.z);
-
-          if(cur_to_best_wall_dist_left < capsule_entity.prev_cur_to_best_wall_dist_left  )
-          {
-            capsule_entity.closest_wall_in_left = best_in_left_wall;
-          }
-          capsule_entity.prev_cur_to_best_wall_dist_left = cur_to_best_wall_dist_left;
-
-          return [capsule_entity.closest_wall_in_left, direction]
-        }    
+              // this part's implementation is still not complete. 
+                if( sceneEntities[i].agent.rotation.z <= 3.6)
+                {
+                    sceneEntities[i].agent.rotation.z = sceneEntities[i].agent.rotation.z + 0.01;
+                }
+                else if( sceneEntities[i].agent.rotation.z >= 3.6)
+                {
+                  sceneEntities[i].agent.rotation.z = 0;
+                }          
+                // customParams.orientation=  'side_step';  //commented
+              
+              }
+              else{          
+                // customParams.orientation=  'front'; // commented
+              }
+       }
     }
 
 
-function findFinalClosestLeftOrRightPointOfVel(capsule_entity, closest_wall_in_left, closest_wall_in_right, closest_agent_in_left, closest_agent_in_right)
-{
-    
-// if there are walls in the scenarios either in left or right side of agent i. else the closest points in right and left could be other agents or obstacles. Below we are deciding that.
-if(closest_wall_in_left.length() != 0 && closest_wall_in_right.length() != 0)   
-{
-    
-    let cur_to_closest_left_wall_dist = distance(capsule_entity.x, capsule_entity.z, closest_wall_in_left.x,closest_wall_in_left.z);
-    let cur_to_closest_left_agent_dist = distance(capsule_entity.x, capsule_entity.z, closest_agent_in_left.x, closest_agent_in_left.z);
-
-    let cur_to_closest_right_wall_dist = distance(capsule_entity.x, capsule_entity.z, closest_wall_in_right.x, closest_wall_in_right.z);
-    let cur_to_closest_right_agent_dist = distance(capsule_entity.x, capsule_entity.z, closest_agent_in_right.x, closest_agent_in_right.z);
-
-    // if there are no agent in the left side, the closer left wall is the closest_in_left
-    if( closest_agent_in_left.length() != 0)
-    { 
-      if(cur_to_closest_left_wall_dist >= cur_to_closest_left_agent_dist)
-      {
-        closest_in_left = closest_agent_in_left;
-      }else{
-          closest_in_left = closest_wall_in_left;
-        }
-    }else{
-      closest_in_left = closest_wall_in_left;
-    }
-
-    // if there are no agent in the right side, the closer right wall is the closest_in_right
-    if( closest_agent_in_right.length() != 0)
-    {      
-      if(cur_to_closest_right_wall_dist >= cur_to_closest_right_agent_dist)
-      {
-          closest_in_right = closest_agent_in_right;
-        }else{
-          {
-            closest_in_right = closest_wall_in_right;
-          }
-      }
-    }else{
-      closest_in_right = closest_wall_in_right;
-    }
 
   }
-  else{
-    closest_in_left = closest_agent_in_left;                        // else the closest points in right and left would be other agents
-    closest_in_right = closest_agent_in_right;
-  }
-  
-
-
-let dist_with_closest_in_left = distance(capsule_entity.x, capsule_entity.z, closest_in_left.x, closest_in_left.z);
-let dist_with_closest_in_right = distance(capsule_entity.x, capsule_entity.z, closest_in_right.x, closest_in_right.z);
-
-if(dist_with_closest_in_left> dist_with_closest_in_right)
-{
-  distToActivateOrientationConstraint = dist_with_closest_in_right;
-}
-else{
-  distToActivateOrientationConstraint = dist_with_closest_in_left;
-}
-      
-return [closest_in_left,  closest_in_right, distToActivateOrientationConstraint]            
-}
 
 
 
@@ -1012,105 +998,6 @@ return [closest_in_left,  closest_in_right, distToActivateOrientationConstraint]
     }
 
 
-
-
-
-// ==============================================================================
-//Orientation constraint
-i = 0;
-// let distToActivateOrientationConstraint = 0;
-while (i < sceneEntities.length) {
-
-  let bestA_point_of_agent = new THREE.Vector3();
-  let bestB_point_of_other_agent = new THREE.Vector3();
-
-  // j = i;   //was before
-  j = 0;  
-
-  //only if the scenario has walls
-    while(j<customParams.wallData.length)
-    {
-      // //find the closest wall right/left of agent i
-      let [bestA_point_of_agent, bestB_point_of_wall] = find_best_point_On_right_or_Left_of_Velocity(sceneEntities[i], customParams.wallData[j], "agents_and_walls");
-
-      sceneEntities[i].point_on_obs = new THREE.Vector3(bestB_point_of_wall.x, 0, bestB_point_of_wall.z);
-      let [closest_point_of_i, letftOrRight_of_i] =  findClosestLeftOrRightWALLPointOfVel(sceneEntities[i], sceneEntities[i].point_on_obs);
-
-      if(letftOrRight_of_i == 'right')
-      {
-        sceneEntities[i].closest_wall_in_right = closest_point_of_i;
-      }
-      
-      if(letftOrRight_of_i == 'left')
-      {
-        sceneEntities[i].closest_wall_in_left = closest_point_of_i;
-      } 
-
-    j += 1;
-    }
-
-    // to iterate over all other agents and to find the closest agent right/left of each agents. 
-    j = i+1 ;
-    while (j < sceneEntities.length) {
-
-      [bestA_point_of_agent, bestB_point_of_other_agent] = find_best_point_On_right_or_Left_of_Velocity(sceneEntities[i], sceneEntities[j], "agents_only"); 
-
-      sceneEntities[i].point_on_obs = new THREE.Vector3(bestB_point_of_other_agent.x, 0, bestB_point_of_other_agent.z);
-      sceneEntities[j].point_on_obs = new THREE.Vector3(bestA_point_of_agent.x, 0, bestA_point_of_agent.z);
-
-      //find the closest agent right/left of agent i
-      let [closest_point_of_i, letftOrRight_of_i] = findClosestLeftOrRightPointOfVel(sceneEntities[i], sceneEntities[i].point_on_obs);
-
-      if(letftOrRight_of_i == 'right')
-      {
-        sceneEntities[i].closest_agent_in_right = closest_point_of_i;
-      }
-      
-      if(letftOrRight_of_i == 'left')
-      {
-        sceneEntities[i].closest_agent_in_left = closest_point_of_i;
-      } 
-
-      //same as before. find the closest agent right/left of agent j
-      let [closest_point_of_j, letftOrRight_of_j] = findClosestLeftOrRightPointOfVel(sceneEntities[j], sceneEntities[j].point_on_obs);
-
-      if(letftOrRight_of_j == 'right')
-      {
-        sceneEntities[j].closest_agent_in_right = closest_point_of_j;
-      }
-        
-      if(letftOrRight_of_j == 'left')
-      {
-        sceneEntities[j].closest_agent_in_left = closest_point_of_j;
-      }    
-
-      j += 1;
-    }
-
-  [closest_in_left,  closest_in_right, distToActivateOrientationConstraint] = findFinalClosestLeftOrRightPointOfVel(sceneEntities[i], sceneEntities[i].closest_wall_in_left, sceneEntities[i].closest_wall_in_right, sceneEntities[i].closest_agent_in_left, sceneEntities[i].closest_agent_in_right);
-
-  let normalized_velocity_2 = new THREE.Vector3(normalized_velocity.x, 0, normalized_velocity.z);
-  let clearance = 0;
-
-  if(sceneEntities[i].closest_wall_in_left.length() != 0 && sceneEntities[i].closest_wall_in_right.length() != 0)   // if there are walls in the scenarios. else the closest points in right and left could be other agents or obstacles. Below we are deciding that.
-  {
-    clearance = computerClearanceForAgent(sceneEntities[i], normalized_velocity_2, closest_in_right, closest_in_left, "has_walls");   // compute the available clearance for the agent based on the two closest points and along the velocity direction.
-  }else{
-    clearance = computerClearanceForAgent(sceneEntities[i], normalized_velocity_2, closest_in_right, closest_in_left, "no_walls");   // compute the available clearance for the agent based on the two closest points and along the velocity direction.
-  }
-
-  // apply orientation constraint to adapt the 
-  orientationConstraint(sceneEntities[i], clearance, distToActivateOrientationConstraint);
-
-  i += 1;
-}
-//===============================================================================
-
-
-
-
-
-
   // agent to wall short-range collision constraint    
   i=0;
    while(i<sceneEntities.length)
@@ -1136,6 +1023,302 @@ while (i < sceneEntities.length) {
      i+=1
    }
 
+
+
+
+
+//Orientation constraint
+i = 0;
+let distToActivateOrientationConstraint = 0;
+while (i < sceneEntities.length) {
+
+  let new_point = new THREE.Vector3();
+  // let wall_depth = customParams.wallData[1].depth;
+
+  let cur_pos = new THREE.Vector3(sceneEntities[i].x, 0, sceneEntities[i].z);
+  normalized_velocity = new THREE.Vector3(sceneEntities[i].vx, 0, sceneEntities[i].vz).normalize();
+  let threshold_Dist = 0.5;
+  let dis_agent_to_walls = 0;
+  
+  // Calculate the new position
+  const displacement = normalized_velocity.clone().multiplyScalar(threshold_Dist);
+  new_point = cur_pos.clone().add(displacement);
+  
+  let prev_cur_to_best_agent_dist_right = 4444;
+  let prev_cur_to_best_agent_dist_left = 4444;
+
+  let prev_cur_to_best_wall_dist_right = 4444;
+  let prev_cur_to_best_wall_dist_left = 4444;
+
+  let bestB_agent_or_wall = new THREE.Vector3();
+  let best_in_agent = new THREE.Vector3();
+
+  let closest_agent_in_left = new THREE.Vector3();
+  let closest_agent_in_right = new THREE.Vector3();
+
+  j = i;
+  //only if the scenario has walls
+  // if(customParams.scenario === 'narrow_hallwayOneAgent_Scenario' || customParams.scenario === 'narrow_hallwayTwoAgent_FaceToFace')
+  // {
+    while(j<customParams.wallData.length)
+    {
+      let [bestA2, w_bestB2, , ] = getBestPointWithWall(new_point.x, new_point.z, customParams.wallData[j]); 
+      dis_agent_to_walls = distance(bestA2.x, bestA2.z, w_bestB2.x, w_bestB2.z); 
+      // distToActivateOrientationConstraint = distance(bestA2.x, bestA2.z, w_bestB2.x, w_bestB2.z);
+
+      // [best_in_right_wall, best_in_left_wall] = find_best_point_On_right_or_Left_of_Velocity(sceneEntities[i], customParams.wallData[j], "agents_and_walls"); //changing
+  //------------------------------------------------------------------------------
+      [bestB_agent_or_wall] = find_best_point_On_right_or_Left_of_Velocity(sceneEntities[i], customParams.wallData[j], "agents_and_walls");
+
+      let point_on_obs = new THREE.Vector3(bestB_agent_or_wall.x, 0, bestB_agent_or_wall.z);
+      
+      // Create vector from capsule position to the point
+      const vectorToPoint = new THREE.Vector3().subVectors(point_on_obs, cur_pos);    
+  
+      // Rotate the velocity vector by 90 degrees in the 2D plane to get the perpendicular vector
+      const perpendicularVector = new THREE.Vector3(-normalized_velocity.z, 0, normalized_velocity.x);
+  
+      // Compute the dot product
+      const dotProduct = perpendicularVector.dot(vectorToPoint);
+  
+      // Determine if the point is to the left or right of the velocity vector.
+      const direction = dotProduct > 0 ? 'right' : 'left';
+  
+
+      if(direction == 'right')
+      {
+        // closest_in_right = bestB_agent_or_wall;    // point is on the right side
+        best_in_right_wall = bestB_agent_or_wall;
+
+        let cur_to_best_wall_dist_right = distance(new_point.x, new_point.z, best_in_right_wall.x, best_in_right_wall.z);
+        if(cur_to_best_wall_dist_right < prev_cur_to_best_wall_dist_right  )
+        {
+            closest_wall_in_right= best_in_right_wall;
+        }
+        prev_cur_to_best_wall_dist_right = cur_to_best_wall_dist_right;
+      }
+  
+      if(direction == 'left')             
+      {
+        // closest_in_left = bestB_agent_or_wall;       // point is on the left side
+        best_in_left_wall = bestB_agent_or_wall;
+
+        let cur_to_best_wall_dist_left = distance(new_point.x, new_point.z, best_in_left_wall.x, best_in_left_wall.z);
+        if(cur_to_best_wall_dist_left < prev_cur_to_best_wall_dist_left  )
+        {
+            closest_wall_in_left= best_in_left_wall;
+        }
+        prev_cur_to_best_wall_dist_left = cur_to_best_wall_dist_left;
+      }
+//------------------------------------------------------------------------------
+
+      j += 1;
+    }
+  // }
+
+  //for only one agent with walls scenario, best points in walls are closest ones.
+  // if(customParams.scenario === 'narrow_hallwayOneAgent_Scenario'){
+
+  //   //get the two closest probable colliding points.
+  //   closest_in_right = best_in_right_wall;
+  //   closest_in_left = best_in_left_wall;
+  //   distToActivateOrientationConstraint = dis_agent_to_walls; 
+  //   }
+
+  //for scenario with multiple walls and capsules, closest points are the best points on closer agents. 
+  // if(customParams.scenario === 'narrow_hallwayTwoAgent_FaceToFace')
+  // {
+    j = i+1 ;
+    while (j < sceneEntities.length) {
+      // distToActivateOrientationConstraint = distance(sceneEntities[i].x, sceneEntities[i].z, sceneEntities[j].x, sceneEntities[j].z);
+
+      // [best_in_right_agent, best_in_left_agent] = find_best_point_On_right_or_Left_of_Velocity(sceneEntities[i], sceneEntities[j], "agents_only");
+
+      //========================================================================
+      [best_in_agent] = find_best_point_On_right_or_Left_of_Velocity(sceneEntities[i], sceneEntities[j], "agents_only");
+
+      // [best_point_of_agent, best_point_of_other_agent] = find_best_point_On_right_or_Left_of_Velocity(sceneEntities[i], sceneEntities[j], "agents_only"); //should be like that
+
+      let point_on_obs = new THREE.Vector3(best_in_agent.x, 0, best_in_agent.z);
+      
+      // Create vector from capsule position to the point
+      const vectorToPoint = new THREE.Vector3().subVectors(point_on_obs, cur_pos);    
+  
+      // Rotate the velocity vector by 90 degrees in the 2D plane to get the perpendicular vector
+      const perpendicularVector = new THREE.Vector3(-normalized_velocity.z, 0, normalized_velocity.x);
+  
+      // Compute the dot product
+      const dotProduct = perpendicularVector.dot(vectorToPoint);
+  
+      // Determine if the point is to the left or right of the velocity vector.
+      const direction = dotProduct > 0 ? 'right' : 'left';
+  
+
+      if(direction == 'right')
+      {
+        // closest_in_right = bestB_agent_or_wall;    // point is on the right side
+        best_in_right_agent = best_in_agent;
+
+        let cur_to_best_agent_dist_right = distance(new_point.x, new_point.z, best_in_right_agent.x, best_in_right_agent.z);
+        if(cur_to_best_agent_dist_right < prev_cur_to_best_agent_dist_right  )
+        {
+          closest_agent_in_right = best_in_right_agent;
+        }
+        prev_cur_to_best_agent_dist_right = cur_to_best_agent_dist_right;
+      }
+      
+
+      // if(sceneEntities[i].index == 0 )
+      // {
+      //   console.log("id 0, ", "closest_agent_in_right: ", closest_agent_in_right);
+      // }
+
+      // if(sceneEntities[i].index == 1 )
+      // {
+      //   console.log("id 1, ", "closest_agent_in_right: ", closest_agent_in_right, "\n\n");
+      // }
+  
+      if(direction == 'left')             
+      {
+        // closest_in_left = bestB_agent_or_wall;       // point is on the left side
+        best_in_left_agent = best_in_agent;
+
+        let cur_to_best_agent_dist_left = distance(new_point.x, new_point.z, best_in_left_agent.x, best_in_left_agent.z);
+        if(cur_to_best_agent_dist_left < prev_cur_to_best_agent_dist_left  )
+        {
+          closest_agent_in_left= best_in_left_agent;
+        }
+        prev_cur_to_best_agent_dist_left = cur_to_best_agent_dist_left;
+      }
+
+      //=========================================================================
+
+      // distToActivateOrientationConstraint = distance(sceneEntities[i].x, sceneEntities[i].z, sceneEntities[j].x, sceneEntities[j].z);
+
+      // let dist_with_left = distance(new_point.x, new_point.z, best_in_right_agent.x, best_in_left_agent.z);
+      // let dist_with_right = distance(new_point.x, new_point.z, best_in_right_agent.x, best_in_left_agent.z);
+
+      // console.log("dist_with_left: ", dist_with_left, ", dist_with_right: ", dist_with_right);
+      console.log("i: ", i, ", j: ", j);
+
+      j += 1;
+    }
+
+    console.log(" \n\n ");
+
+    // if(sceneEntities[i].index == 0 )
+    // {
+    //   console.log("id 0, ", "closest_agent_in_right: ", closest_agent_in_right , ", closest_agent_in_left: ", closest_agent_in_left);
+    // }
+  
+    // if(sceneEntities[i].index == 1 )
+    // {
+    //   console.log("id 1, ", "closest_agent_in_right: ", closest_agent_in_right, ", closest_agent_in_left: ", closest_agent_in_left, "\n\n");
+    // }
+
+    // if(sceneEntities[i].index == 2 )
+    // {
+    //   console.log("id 2, ", "closest_agent_in_right: ", closest_agent_in_right , ", closest_agent_in_left: ", closest_agent_in_left);
+    // }
+    
+    // if(sceneEntities[i].index == 3 )
+    // {
+    //   console.log("id 3, ", "closest_agent_in_right: ", closest_agent_in_right, ", closest_agent_in_left: ", closest_agent_in_left, "\n\n");
+    // }
+
+    // if(sceneEntities[i].index == 0)
+    // {
+    //   console.log("closest_wall_in_right: ", closest_wall_in_right, ", closest_wall_in_left: ", closest_wall_in_left);
+    //   console.log("closest_agent_in_right: ", closest_agent_in_right, ", closest_agent_in_left: ", closest_agent_in_left);
+    //   console.log(" \n\n ");
+    // }
+
+    let cur_to_closest_left_wall_dist = distance(new_point.x, new_point.z, closest_wall_in_left.x, closest_wall_in_left.z);
+    let cur_to_closest_left_agent_dist = distance(new_point.x, new_point.z, closest_agent_in_left.x, closest_agent_in_left.z);
+
+    let cur_to_closest_right_wall_dist = distance(new_point.x, new_point.z, closest_wall_in_right.x, closest_wall_in_right.z);
+    let cur_to_closest_right_agent_dist = distance(new_point.x, new_point.z, closest_agent_in_right.x, closest_agent_in_right.z);
+
+    if(cur_to_closest_left_wall_dist >= cur_to_closest_left_agent_dist)
+    {
+        closest_in_left = closest_agent_in_left;
+    }else{
+        {
+          closest_in_left = closest_wall_in_left;
+        }
+    }
+
+    if(cur_to_closest_right_wall_dist >= cur_to_closest_right_agent_dist)
+    {
+        closest_in_right = closest_agent_in_right;
+      }else{
+        {
+          closest_in_right = closest_wall_in_right;
+        }
+    }
+
+
+    // if(sceneEntities[i].index == 0)
+    //   {
+    //     console.log("closest_in_left: ", closest_in_left, ", closest_in_right: ", closest_in_right);
+    //     console.log(" \n\n ");
+    //   }
+
+    distToActivateOrientationConstraint = distance(new_point.x, new_point.z, closest_in_left.x, closest_in_left.z);
+    // console.log("distToActivateOrientationConstraint: ", distToActivateOrientationConstraint );
+
+
+    //get the two closest probable colliding points.
+    // [closest_in_right, closest_in_left] = findClosestInLeftAndRightOfVelocity(new_point, best_in_left_wall, best_in_left_agent, best_in_right_wall, best_in_right_agent);
+  // }
+
+
+  if(customParams.scenario === 'dense_torso_like')
+  {
+    j = i+1 ;
+    while (j < sceneEntities.length) 
+    { 
+      [best_in_right_agent, best_in_left_agent] = find_best_point_On_right_or_Left_of_Velocity(sceneEntities[i], sceneEntities[j], "agents_only");
+
+      //find the closest colliding points in the right and left side of the velocity. 
+      let cur_to_best_agent_dist_right = distance(new_point.x, new_point.z, best_in_right_agent.x, best_in_right_agent.z);
+      if(cur_to_best_agent_dist_right < prev_cur_to_best_agent_dist_right  )
+      {
+          closest_in_right = best_in_right_agent;
+      }
+      prev_cur_to_best_agent_dist_right = cur_to_best_agent_dist_right;
+
+      let cur_to_best_agent_dist_left = distance(new_point.x, new_point.z, best_in_left_agent.x, best_in_left_agent.z);
+      if(cur_to_best_agent_dist_left < prev_cur_to_best_agent_dist_left  )
+      {
+          closest_in_left = best_in_left_agent;
+      }
+      prev_cur_to_best_agent_dist_left = cur_to_best_agent_dist_left;
+
+      let dist_btwn_cur_to_closest_right = distance(new_point.x, new_point.z, closest_in_right.x, closest_in_right.z);
+      let dist_btwn_cur_to_closest_left = distance(new_point.x, new_point.z, closest_in_left.x, closest_in_left.z);
+
+      //determine a threshold distance to decide when to start orientation change to give capsules some times to rotate successfully.
+      if(dist_btwn_cur_to_closest_right <= dist_btwn_cur_to_closest_left)
+      {
+        distToActivateOrientationConstraint = dist_btwn_cur_to_closest_right;
+      }else{
+        distToActivateOrientationConstraint = dist_btwn_cur_to_closest_left;
+      }
+  
+      j += 1;
+    }
+  }
+
+
+  let normalized_velocity_2 = new THREE.Vector3(normalized_velocity.x, 0, normalized_velocity.z);
+  let clearance = computerClearanceForAgent(normalized_velocity_2, closest_in_right, closest_in_left); // compute the available clearance for the agent based on the two closest points and along the velocity direction.
+
+    // apply orientation constraint to adapt the 
+  orientationConstraint(sceneEntities[i], clearance, distToActivateOrientationConstraint);
+
+  i += 1;
+}
 
 
 
@@ -1212,19 +1395,19 @@ while (i < sceneEntities.length) {
   //Rotation constraint
   // if(customParams.orientation === 'front')
   // {
-    // i = 0;
-    // while (i < sceneEntities.length) {
+  //   i = 0;
+  //   while (i < sceneEntities.length) {
       
-    //   if(customParams.tempcount > 2) //allowing to adjust capsule's facing direction to the goal direction at the beginning.
-    //   {
-    //     let corrected_position = rotationConstraint(sceneEntities[i]);
+  //     if(customParams.tempcount > 2) //allowing to adjust capsule's facing direction to the goal direction at the beginning.
+  //     {
+  //       let corrected_position = rotationConstraint(sceneEntities[i]);
         
-    //     sceneEntities[i].px = corrected_position.x;
-    //     sceneEntities[i].pz = corrected_position.z;
-    //   }
+  //       sceneEntities[i].px = corrected_position.x;
+  //       sceneEntities[i].pz = corrected_position.z;
+  //     }
       
-    //   i += 1;
-    // }
+  //     i += 1;
+  //   }
   // }
 
 
@@ -1246,7 +1429,7 @@ while (i < sceneEntities.length) {
       // item.agent.rotation.z = Math.atan2(dz, dx);  //original code for rotation
       let  next_orientation = Math.atan2(dz, dx);
 
-      if( Math.abs(cur_orientation - next_orientation) >= 0.0)   // 0.0 makes the orientation better after recovering from the full body rotations.
+        if( Math.abs(cur_orientation - next_orientation) >= 0.0)   // 0.0 makes the orientation better after recovering from the full body rotations.
       {
         item.agent.rotation.z = cur_orientation - cur_orientation/200;
       }
@@ -1267,36 +1450,36 @@ while (i < sceneEntities.length) {
     item.y = item.py;
 
     
-  //--------- This velocity scripting only For Torso Crowd-like Dense Scenario. Currently, we are making some capsules static by making their velocity zero -----------------
-  if(customParams.scenario==='dense_torso_like')
+//--------- This velocity scripting only For Torso Crowd-like Dense Scenario. Currently, we are making some capsules static by making their velocity zero -----------------
+if(customParams.scenario==='dense_torso_like')
   {   
-        if(item.index != 0)
-        { 
-          item.vx = 0;
-          item.vy = 0;
-          item.vz = 0;
-      
-          item.x = item.goal_x;
-          item.z = item.goal_z;
-          item.y = 0;
-        }
+      if(item.index != 0)
+      { 
+        item.vx = 0;
+        item.vy = 0;
+        item.vz = 0;
     
-        if(item.index == 2)    // we can iterate over all the agents and generate random orientations for all agents.
-        { 
-          item.agent.rotation.z = .5;
-        }
-        if(item.index == 5)    // we can iterate over all the agents and generate random orientations for all agents.
-        { 
-          item.agent.rotation.z = .5;
-        }
-        if(item.index == 7)    // we can iterate over all the agents and generate random orientations for all agents.
-        { 
-          item.agent.rotation.z = .5;
-        }
-        if(item.index == 8)    // we can iterate over all the agents and generate random orientations for all agents.
-        { 
-          item.agent.rotation.z = .5;
-        }
+        item.x = item.goal_x;
+        item.z = item.goal_z;
+        item.y = 0;
+      }
+  
+      if(item.index == 2)    // we can iterate over all the agents and generate random orientations for all agents.
+      { 
+        item.agent.rotation.z = .5;
+      }
+      if(item.index == 5)    // we can iterate over all the agents and generate random orientations for all agents.
+      { 
+        item.agent.rotation.z = .5;
+      }
+      if(item.index == 7)    // we can iterate over all the agents and generate random orientations for all agents.
+      { 
+        item.agent.rotation.z = .5;
+      }
+      if(item.index == 8)    // we can iterate over all the agents and generate random orientations for all agents.
+      { 
+        item.agent.rotation.z = .5;
+      }
   }
 
   });
