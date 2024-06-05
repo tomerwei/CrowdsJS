@@ -3189,9 +3189,9 @@ function rectangle_Scenario() {
 //----------------------------------------------------------
 //uncomment any of the 3 scenarios below to test in different scenarios.
 
-  // narrow_hallwayOneAgent_Scenario();
+  narrow_hallwayOneAgent_Scenario();
   // narrow_hallwayTwoAgent_FaceToFace_Scenario();
-  dense_Scenario_As_Torso_Crowd_Paper_V3();
+  // dense_Scenario_As_Torso_Crowd_Paper_V3();
 
   // tryingScenario_Bilas_1_4_agents_V2();
   // oneAgentCrossingGroup();
