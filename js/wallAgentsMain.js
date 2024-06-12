@@ -12,12 +12,25 @@ let world = {
     z: 80
 };
 let agentData = [];
+
+// added variables
+let agentGoalFlags = [];
+let agentStartFlags = []; //0 is starting at the top, 1 is starting at the side
+//
+
 let pickableObjects = [];
 let wallsData = [];
 let selected = null;
 let mouse = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 let grid,ring;
+
+//added variables
+let goalArea = 6; //"radius" by which the goals are extended
+let curgoalPos = {x: 0, z: 0};
+let goalPos1 = {x: 0, z: 0}; //first goal, center of the intersection
+let goalPos2 = {x: -50,z: 0}; //second goal, the "exit"
+//
 
 let spotLights = {};
 
@@ -38,6 +51,8 @@ render();
 
 
 function init() {
+	curgoalPos = goalPos1;
+	
     // renderer
     renderer = new THREE.WebGLRenderer();
     renderer.shadowMap.enabled = true;
@@ -119,44 +134,34 @@ function init() {
     ring.rotation.x = -Math.PI / 2;
     ring.position.y+=0.01;
 
-    function addColumnAgentGroup(agentData, numAgents, spacing,
-        startPos, goalPos,
-        velocityMagnitude, direction) {
-        let i = 0;
+    function addColumnAgentGroup(agentData, numAgents, spacing, startPos, velocityMagnitude, direction) {
+		console.log("b")
         let initalIdx = agentData.length;
-        let dx = 0,
-            dz = 0,
-            vx = 0,
+        let vx = 0,
             vz = 0;
-        let distanceToGoal = PHY.distance(startPos.x, startPos.z,
-            goalPos.x, goalPos.z);
-        vx = velocityMagnitude * (goalPos.x - startPos.x) / distanceToGoal;
-        vz = velocityMagnitude * (goalPos.z - startPos.z) / distanceToGoal;
+		let distanceToGoal = PHY.distance(startPos.x, startPos.z, curgoalPos.x, curgoalPos.z);
+		vx = velocityMagnitude * (curgoalPos.x - startPos.x) / distanceToGoal;
+		vz = velocityMagnitude * (curgoalPos.z - startPos.z) / distanceToGoal;
 
-        if (direction == "X") {
-            dx = spacing;
-        } else if (direction == "Z") {
-            dz = spacing;
-        }
-        while (i < numAgents) {
+        for (let i = 0; i < numAgents; i++) {
+			console.log("a")
             agentData.push({
                 index: i + initalIdx,
-                x: startPos.x + dx * i,
+                x: startPos.x,
                 y: 2.0,
-                z: startPos.z + dz * i,
-                goal_x: goalPos.x + dx * i,
-                goal_y: 0.0,
-                goal_z: goalPos.z + dz * i,
+                z: startPos.z,
+				goal_x: curgoalPos.x,
+				goal_y: 0.0,
+				goal_z: curgoalPos.z,
                 vx: vx,
                 vy: 0.0,
                 vz: vz,
                 v_pref: Math.sqrt(vx*vx + vz*vz),
                 radius: RADIUS,
-                invmass: 0.5,
-                group_id: 1
+                invmass: 0.5
             });
-            i += 1;
         }
+
     }
 
 
@@ -168,81 +173,30 @@ function init() {
     startY = -20
     goalY = 20;
     world.distanceConstraints = [];
-
-    addColumnAgentGroup(agentData, 3, RADIUS * 4, {
-            x: 30,
-            z: 25
-        }, {
-            x: -25,
-            z: 25
-        },
-        0.6, "X", );
-
-    addColumnAgentGroup(agentData, 4, RADIUS * 4, {
-            x: 25,
-            z: 20
-        }, {
-            x: -25,
-            z: 20
-        },
-        0.7, "X", );
-
-    addColumnAgentGroup(agentData, 4, RADIUS * 4, {
-            x: 25,
-            z: 10
-        }, {
-            x: -25,
-            z: 10
-        },
-        0.8, "X", );
-
-    addColumnAgentGroup(agentData, 4, RADIUS * 4, {
-            x: 25,
-            z: 6
-        }, {
-            x: -25,
-            z: 6
-        },
-        0.8, "X", );
-
-    addColumnAgentGroup(agentData, 3, RADIUS * 4, {
-            x: -25,
-            z: 12
-        }, {
-            x: 30,
-            z: 25
-        },
-        0.6, "X", );
-
-    addColumnAgentGroup(agentData, 3, RADIUS * 4, {
-            x: -25,
-            z: 0
-        }, {
-            x: 30,
-            z: 33
-        },
-        0.6, "X", );
-
-
-    addColumnAgentGroup(agentData, 8, RADIUS * 4, {
-            x: 0,
-            z: -25.
-        }, {
-            x: 0,
-            z: 30,
-        },
-        0.6, "Z", );
-
-    addColumnAgentGroup(agentData, 3, RADIUS * 4, {
-            x: RADIUS * 3,
-            z: 25.
-        }, {
-            x: RADIUS * 3,
-            z: -25,
-        },
-        0.6, "Z", );
-
-
+	let num_of_agents_up = 100 //represents the agents that will start at the top hallway
+	let num_of_agents_side = 100 //represents the agents that will start at the side hallway
+	let up_x_max = 35;
+	let up_x_min = 10;
+	let up_z_max = 5;
+	let up_z_min = -5;
+	let side_x_max = 5;
+	let side_x_min = -5;
+	let side_z_max = 35;
+	let side_z_min = 10;
+	for (let i = 0; i < num_of_agents_up; i++) {
+		addColumnAgentGroup(agentData, 1, RADIUS * 4, { //start position
+            x: getRandomInt(up_x_min, up_x_max),
+            z: getRandomInt(up_z_min, up_z_max)
+        }, 10, "X", );
+		agentGoalFlags.push(false);
+	}
+	for (let i = 0; i < num_of_agents_side; i++) {
+		addColumnAgentGroup(agentData, 1, RADIUS * 4, { //start position
+            x: getRandomInt(side_x_min, side_x_max),
+            z: -getRandomInt(side_z_min, side_z_max)
+        }, 10, "X", );
+		agentGoalFlags.push(false);
+	}
     let agnetGeometry, agentMaterial, agent;
     let spotLight, spotLightTarget;
 
@@ -262,16 +216,38 @@ function init() {
         pickableObjects.push(agent);
     });
 
-
+//new walls created o make the shape of the hallway/intersection
     wallsData.push({
-                "x": -15.0,
+		//these represent position
+                "x": -22.5,
                 "y": 0,
-                "z": -15.0,
-                "dx":5.0,
+                "z": -22.5,
+				//these represent size of the wall
+                "dx":30.0,
                 "dy":15.0,
-                "dz":20.0,
+                "dz":30.0,
             });
-
+    wallsData.push({
+		//these represent position
+                "x": 22.5,
+                "y": 0,
+                "z": -22.5,
+				//these represent size of the wall
+                "dx":30.0,
+                "dy":15.0,
+                "dz":30.0,
+            });
+	wallsData.push({
+		//these represent position
+                "x": 0,
+                "y": 0,
+                "z": 17.5,
+				//these represent size of the wall
+                "dx":75.0,
+                "dy":15.0,
+                "dz":22.5,
+            });
+			
     let wallGeometry, wall, wallMaterial;
     wallsData.forEach(function (item) {
         wallGeometry = new THREE.BoxGeometry(item.dx, item.dy, item.dz);
@@ -289,7 +265,8 @@ function init() {
         wall.position.z = item.z; 
         //pickableObjects.push(wall);
     });
-
+	world['wallData'] = wallsData
+	//world - data place that is everything that is NOT an agent
     window.addEventListener("resize", onWindowResize);
     window.addEventListener("mousedown", mouseDown, false);
     window.addEventListener("mousemove", mouseMove, false);
@@ -323,7 +300,9 @@ function mouseMove(event) {
         }   
     }
 }
-
+function getRandomInt(min_int, max_int) {
+	return Math.random() * (max_int - min_int) + min_int;
+}
 
 function mouseDown(event) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -345,17 +324,59 @@ function render() {
 function animate() {
     requestAnimationFrame(animate);
     PHY.step(RADIUS, agentData, world)
+	let count = 0;
     agentData.forEach(function(member) {
         member.agent.position.x = member.x;
         member.agent.position.y = member.y;
         member.agent.position.z = member.z;
+		//console.log(member.agent.position.x);
+		//console.log(member.agent.position.z);
+		if (member.agent.position.x <= 40 && member.agent.position.x >= -10 && member.agent.position.z <= goalPos1.z + goalArea && member.agent.position.z >= goalPos1.z - goalArea) {
+			//console.log("first goal reached!")
+			agentGoalFlags[count] = true;
+			console.log(agentGoalFlags[count])
+		}
         member.agent.material = redAgentMaterial;
         if(selected!=null&& member.index == selected)
         {
             member.agent.material = blueAgentMaterial;
         }
+		if (member.agent.position.x <= -35) {
+			agentGoalFlags[count] = false;
+			let rand = getRandomInt(0, 100); //random number to determine which end of the intersection the agent/member will be teleported too.
+			if (rand >= 50) {
+				member.x = 39.5;
+				member.z = getRandomInt(-5, 5);
+				agentStartFlags[count] = 1;
+			}
+			else {
+				member.x = getRandomInt(-5, 5);
+				member.z = -39.5;
+				agentStartFlags[count] = 0;
+			}
+		}
+		count++;
 
     });
+	for (let i = 0; i < agentGoalFlags.length; i++) {
+		//console.log(agentGoalFlags[i])
+		if (agentGoalFlags[i] == true) {
+			agentData[i].goal_x = goalPos2.x;
+			agentData[i].goal_z = agentData[i].z;
+			//console.log("next goal time");
+		}
+		else {
+			agentData[i].goal_x = goalPos1.x;
+			agentData[i].goal_z = goalPos1.z;
+			if (agentStartFlags[i] == 1) {
+				agentData[i].goal_z = agentData[i].z;
+			}
+			if (agentStartFlags[i] == 0) {
+				agentData[i].goal_x = agentData[i].x;
+			}
+		}
+	}
+
     renderer.render(scene, camera);
     stats.update()
 };
