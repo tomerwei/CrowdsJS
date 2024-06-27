@@ -16,7 +16,7 @@ export function step(RADIUS,sceneEntities,world) {
 	const timestep = 0.03;
 	const ITERNUM =3;
 	const MAX_DELTA = 0.9;//0.01;
-		    //added variables
+	//added variables
 	let goalArea = 5; //"radius" by which the goals are extended
 	let goalPos1 = {x: 0, z: 0}; //first goal, center of the intersection
 	let goalPos2 = {x: -50,z: 0}; //second goal, the "exit"
